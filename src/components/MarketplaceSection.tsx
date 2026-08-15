@@ -1143,6 +1143,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
   });
 
   // Modals for Offer details and See all
+  const [receivedOfferIds, setReceivedOfferIds] = useState<string[]>([]);
   const [selectedOfferForModal, setSelectedOfferForModal] = useState<LiveOfferItem | null>(null);
   const [isSeeAllOffersModalOpen, setIsSeeAllOffersModalOpen] = useState(false);
   const [justActionedOfferId, setJustActionedOfferId] = useState<string | null>(null);
@@ -1165,8 +1166,10 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
   const toggleOfferSound = useCallback(() => {
     setIsOfferSoundEnabled(prev => {
       const next = !prev;
+      setIsToolkitSoundOn(next);
       try {
         localStorage.setItem('ptenit_offer_sound_enabled', JSON.stringify(next));
+        localStorage.setItem('ptenit_toolkit_sound', String(next));
       } catch {}
       if (!next) {
         stopOfferNotificationSound();
@@ -1323,10 +1326,10 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
         acceptCourseOffer(newCourseId, currentUser?.id, currentUser?.name);
       }
 
-      setSwitchSuccessMsg(`🎉 '${offer.title}' কোর্স অফারটি সফলভাবে রিসিভ করা হয়েছে! এটি "আমার পরিচালিত কোর্স" লিস্টে যুক্ত হয়েছে এবং মেন্টর সার্ভিস অ্যাক্টিভ হয়েছে।`);
+      setSwitchSuccessMsg(`🎉 '${offer.title}' কোর্স অফার রিসিভ করা হয়েছে • ৳${offer.budget.toLocaleString()}`);
       setTimeout(() => {
         setSwitchSuccessMsg('');
-      }, 5000);
+      }, 4000);
     } else {
       const newOrder: MarketplaceOrder = {
         id: `ord-mkt-${Date.now()}`,
@@ -1353,18 +1356,20 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
       };
 
       addMarketplaceOrder(newOrder);
-      setSwitchSuccessMsg(`🎉 '${offer.title}' অফারটি সফলভাবে রিসিভ করা হয়েছে! বাজেট: ৳${offer.budget.toLocaleString()}`);
+      setSwitchSuccessMsg(`🎉 '${offer.title}' অফার রিসিভ করা হয়েছে • ৳${offer.budget.toLocaleString()}`);
       setTimeout(() => {
         setSwitchSuccessMsg('');
-      }, 5000);
+      }, 4000);
     }
+
+    setReceivedOfferIds((prev) => (prev.includes(offer.id) ? prev : [...prev, offer.id]));
 
     setTimeout(() => {
       // Remove from active list
       setActiveOffersList((prev) => prev.filter((item) => item.id !== offer.id));
       setJustActionedOfferId(null);
       setOfferActionType(null);
-      setSelectedOfferForModal(null);
+      // Keep modal open so the user can review all details without pop-up disappearing
       setActiveOfferIndex((curr) => (curr >= activeOffersList.length - 1 ? 0 : curr));
     }, 400);
   };
@@ -1376,10 +1381,10 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
     setJustActionedOfferId(offer.id);
     setOfferActionType('rejected');
 
-    setSwitchSuccessMsg(`⚠️ '${offer.title.substring(0, 35)}...' অফারটি বাতিল/রিজেক্ট করা হয়েছে।`);
+    setSwitchSuccessMsg(`⚠️ '${offer.title.substring(0, 30)}...' বাতিল করা হয়েছে`);
     setTimeout(() => {
       setSwitchSuccessMsg('');
-    }, 4000);
+    }, 3500);
 
     setTimeout(() => {
       // Remove from active list
@@ -2884,17 +2889,6 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
 
             return (
               <>
-                {/* Account Switch Toast Notification */}
-                {switchSuccessMsg && (
-                  <div className="p-4 bg-[#1DB954]/15 text-[#1DB954] font-black text-xs sm:text-sm rounded-2xl border border-[#1DB954]/40 shadow-md flex items-center justify-between gap-3 animate-fadeIn mb-4">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 shrink-0 text-[#1DB954]" />
-                      <span>{switchSuccessMsg}</span>
-                    </div>
-                    <button onClick={() => setSwitchSuccessMsg('')} className="p-1 hover:bg-[#1DB954]/20 rounded-lg text-slate-400 hover:text-white transition">✕</button>
-                  </div>
-                )}
-
                 {/* SPECIALIST DASHBOARD 2-COLUMN LAYOUT WITH LEFT SIDEBAR */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4 font-bengali animate-fadeIn">
                   
@@ -3103,226 +3097,6 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                         </div>
                       </div>
 
-                      {/* LIVE OFFER / ORDER NOTIFICATION BANNER (PERFECTLY CENTERED ON COVER) */}
-                      {activeOffersList.length > 0 && activeOffersList[activeOfferIndex % activeOffersList.length] && (
-                        <div className="relative z-20 my-auto w-full max-w-4xl mx-auto py-2 sm:py-3">
-                          {(() => {
-                            const currentOffer = activeOffersList[activeOfferIndex % activeOffersList.length];
-                            const timerPercentage = totalOfferDuration > 0 ? (offerCountdown / totalOfferDuration) * 100 : 0;
-                            const isBeingActioned = justActionedOfferId === currentOffer.id;
-
-                            return (
-                              <div
-                                onMouseEnter={() => setIsOfferPaused(true)}
-                                onMouseLeave={() => setIsOfferPaused(false)}
-                                className={`relative overflow-hidden backdrop-blur-2xl bg-slate-900/90 hover:bg-slate-900/95 border ${
-                                  currentOffer.type === 'personal'
-                                    ? 'border-amber-500/40 shadow-amber-500/10'
-                                    : 'border-[#1DB954]/40 shadow-[#1DB954]/10'
-                                } rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-2xl shadow-black/60 transition-all duration-300 group`}
-                              >
-                                {/* Ambient Background Lighting */}
-                                <div className={`absolute -right-10 -top-10 w-44 h-44 rounded-full blur-3xl pointer-events-none transition-all duration-500 ${
-                                  currentOffer.type === 'personal' ? 'bg-amber-500/15' : 'bg-[#1DB954]/15'
-                                }`} />
-
-                                {/* Top Bar: Badge, Source, Countdown Badge, See All, Next */}
-                                <div className="flex items-center justify-between gap-2.5 pb-2.5 border-b border-white/10 flex-wrap">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="relative flex h-2.5 w-2.5">
-                                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                                        currentOffer.type === 'personal' ? 'bg-amber-400' : 'bg-[#1DB954]'
-                                      }`}></span>
-                                      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                                        currentOffer.type === 'personal' ? 'bg-amber-400' : 'bg-[#1DB954]'
-                                      }`}></span>
-                                    </span>
-                                    
-                                    {currentOffer.type === 'personal' ? (
-                                      <span className="text-[10px] sm:text-xs font-black px-3 py-1 rounded-full border border-amber-400/60 bg-gradient-to-r from-amber-500/25 via-yellow-500/20 to-amber-600/20 text-amber-300 flex items-center gap-1.5 shadow-md shadow-amber-950/40 backdrop-blur-md">
-                                        <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                        <span>ডিরেক্ট পার্সোনাল অর্ডার</span>
-                                      </span>
-                                    ) : currentOffer.type === 'course' ? (
-                                      <span className="text-[10px] sm:text-xs font-black px-3 py-1 rounded-full border border-cyan-400/50 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 flex items-center gap-1.5 shadow-sm backdrop-blur-md">
-                                        <GraduationCap className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                                        <span>{currentOffer.typeLabel.replace(/^[⚡🔒]\s*/, '')}</span>
-                                      </span>
-                                    ) : (
-                                      <span className="text-[10px] sm:text-xs font-black px-3 py-1 rounded-full border border-emerald-500/40 bg-emerald-500/20 text-emerald-300 flex items-center gap-1.5 shadow-sm backdrop-blur-md">
-                                        <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                        <span>{currentOffer.typeLabel.replace(/^[⚡🔒]\s*/, '')}</span>
-                                      </span>
-                                    )}
-
-                                    <span className="text-[10px] text-slate-300 font-bold px-2.5 py-0.5 bg-white/5 rounded-lg border border-white/10 hidden xs:inline-block">
-                                      {currentOffer.category}
-                                    </span>
-                                  </div>
-
-                                  {/* Timer Badge + Pause Indicator + See All Button */}
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    {/* Hover Pause Status Indicator */}
-                                    {isOfferPaused && (
-                                      <span className="text-[10px] font-bold text-amber-300 bg-amber-950/90 border border-amber-500/40 px-2.5 py-0.5 rounded-full animate-pulse flex items-center gap-1 shadow-xs">
-                                        ⏸️ পজড
-                                      </span>
-                                    )}
-
-                                    {/* Circular & Numeric Countdown */}
-                                    <div
-                                      className="flex items-center gap-1.5 px-3 py-1 bg-slate-950/90 border border-amber-400/40 text-amber-300 rounded-full text-[10px] sm:text-xs font-black shadow-inner"
-                                      title="মাউস হোভার করলে কাউন্টডাউন পজ থাকবে"
-                                    >
-                                      <Clock className={`w-3.5 h-3.5 text-amber-400 ${isOfferPaused ? '' : 'animate-spin'}`} style={{ animationDuration: '4s' }} />
-                                      <span className="font-mono text-white bg-amber-500/25 px-1.5 py-0.2 rounded">
-                                        {offerCountdown}s
-                                      </span>
-                                    </div>
-
-                                    {/* Dedicated Sound Toggle 1-Icon Button */}
-                                    <button
-                                      type="button"
-                                      onClick={toggleOfferSound}
-                                      className={`relative p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center shadow-xs active:scale-90 group ${
-                                        isOfferSoundEnabled
-                                          ? 'bg-emerald-500/20 text-[#1DB954] border-[#1DB954]/50 hover:bg-emerald-500/30'
-                                          : 'bg-rose-500/20 text-rose-400 border-rose-500/50 hover:bg-rose-500/30'
-                                      }`}
-                                      title={isOfferSoundEnabled ? "অফার সাউন্ড চালু আছে (ক্লিক করলে বন্ধ হবে)" : "অফার সাউন্ড বন্ধ আছে (ক্লিক করলে চালু হবে)"}
-                                    >
-                                      {isOfferSoundEnabled ? (
-                                        <>
-                                          <Volume2 className="w-4 h-4 text-[#1DB954] group-hover:scale-110 transition-transform" />
-                                          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1DB954] ring-2 ring-slate-900 animate-pulse" />
-                                        </>
-                                      ) : (
-                                        <>
-                                          <VolumeX className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
-                                          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-slate-900" />
-                                        </>
-                                      )}
-                                    </button>
-
-                                    {/* 'See All' button if multiple offers exist */}
-                                    {activeOffersList.length > 1 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => setIsSeeAllOffersModalOpen(true)}
-                                        className="px-3 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white text-[10px] sm:text-xs font-bold border border-white/15 transition-all cursor-pointer flex items-center gap-1 shadow-sm active:scale-95"
-                                        title="সবগুলো অফার একসাথে দেখুন"
-                                      >
-                                        <span>সকল অফার ({activeOffersList.length})</span>
-                                        <ChevronRight className="w-3 h-3 text-[#1DB954]" />
-                                      </button>
-                                    )}
-
-                                    {/* Next Switch Control */}
-                                    {activeOffersList.length > 1 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setActiveOfferIndex((curr) => (curr + 1) % activeOffersList.length);
-                                        }}
-                                        className="p-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer border border-white/10 active:scale-95"
-                                        title="পরবর্তী অফার"
-                                      >
-                                        <ChevronRight className="w-3.5 h-3.5" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Main Content: Client Info, Offer Title, Budget, Buttons */}
-                                <div className="pt-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                                  
-                                  {/* Left: Client Avatar + Name + Title */}
-                                  <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-                                    <img
-                                      src={currentOffer.clientAvatar}
-                                      alt={currentOffer.clientName}
-                                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover border-2 border-[#1DB954] shrink-0 shadow-md"
-                                    />
-                                    <div className="min-w-0 flex-1 space-y-0.5">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-xs sm:text-sm font-black text-white truncate">
-                                          {currentOffer.clientName}
-                                        </span>
-                                        {currentOffer.isVerified && (
-                                          <BadgeCheck className="w-3.5 h-3.5 text-[#1DB954] shrink-0" />
-                                        )}
-                                        <span className="text-[10px] text-amber-400 font-bold">★ {currentOffer.rating}</span>
-                                      </div>
-                                      <p className="text-sm sm:text-base font-extrabold text-white line-clamp-2 leading-snug">
-                                        {currentOffer.title}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  {/* Right: Budget + Action Buttons (View Details & Receive) */}
-                                  <div className="flex items-center justify-between md:justify-end gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-white/10 flex-wrap">
-                                    <div className="text-left md:text-right pr-1">
-                                      <div className="flex items-center gap-1 md:justify-end">
-                                        <span className="text-[10px] text-slate-300 font-bold">
-                                          {currentOffer.type === 'course' || currentOffer.typeLabel.includes('কোর্স') ? 'কোর্স ফি / সম্মানিয়াম:' : 'বাজেট:'}
-                                        </span>
-                                        <span className="text-base sm:text-lg font-black text-[#1DB954] drop-shadow-sm">
-                                          ৳{currentOffer.budget.toLocaleString()}
-                                        </span>
-                                      </div>
-                                      <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
-                                        <Clock className="w-3 h-3 text-slate-400" />
-                                        {currentOffer.type === 'course' || currentOffer.typeLabel.includes('কোর্স') ? 'টার্গেট / ক্লাসেস:' : 'ডেলিভারি:'} {currentOffer.deadline}
-                                      </span>
-                                    </div>
-
-                                    {/* Action Buttons */}
-                                    <div className="flex items-center gap-2">
-                                      {/* View Details Button */}
-                                      <button
-                                        type="button"
-                                        onClick={() => setSelectedOfferForModal(currentOffer)}
-                                        className="px-3.5 sm:px-4 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs border border-white/15 transition-all cursor-pointer shadow-sm flex items-center gap-1.5 active:scale-95"
-                                      >
-                                        <Info className="w-3.5 h-3.5 text-[#1DB954]" />
-                                        <span>View Details (বিস্তারিত)</span>
-                                      </button>
-
-                                      {/* Receive Button */}
-                                      {isBeingActioned && offerActionType === 'received' ? (
-                                        <button
-                                          disabled
-                                          className="px-4.5 py-2 bg-emerald-500 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/30 animate-pulse"
-                                        >
-                                          <CheckCircle2 className="w-4 h-4 text-slate-950" />
-                                          <span>রিসিভড!</span>
-                                        </button>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleReceiveLiveOffer(currentOffer)}
-                                          className="px-4.5 sm:px-5 py-2 bg-gradient-to-r from-[#1DB954] to-emerald-400 hover:from-emerald-400 hover:to-[#1DB954] text-slate-950 font-black rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-lg shadow-[#1DB954]/25 hover:shadow-[#1DB954]/40 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                                        >
-                                          <Zap className="w-4 h-4 fill-slate-950 text-slate-950" />
-                                          <span>রিসিভ করুন</span>
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Dynamic Smooth Progress Bar */}
-                                <div className="w-full bg-slate-800/90 rounded-full h-1.5 mt-3.5 overflow-hidden">
-                                  <div
-                                    className="bg-gradient-to-r from-amber-400 via-[#1DB954] to-emerald-400 h-full rounded-full transition-all duration-1000 ease-linear shadow-xs"
-                                    style={{ width: `${timerPercentage}%` }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      )}
                     </div>
 
                     {/* 2. BOTTOM PROFILE INFO AREA OVERLAPPING COVER BANNER WITH GENEROUS SPACING */}
@@ -3397,15 +3171,20 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                             </button>
                           </div>
 
-                          {/* Premium Sound Effect Toggle 1-Icon Button */}
+                          {/* Premium Sound Effect Toggle 1-Icon Button (Master Audio Control) */}
                           <button
                             type="button"
                             onClick={() => {
                               const nextState = !isToolkitSoundOn;
                               setIsToolkitSoundOn(nextState);
+                              setIsOfferSoundEnabled(nextState);
                               try {
                                 localStorage.setItem('ptenit_toolkit_sound', String(nextState));
+                                localStorage.setItem('ptenit_offer_sound_enabled', JSON.stringify(nextState));
                               } catch {}
+                              if (!nextState) {
+                                stopOfferNotificationSound();
+                              }
                               playToolkitSound(nextState ? 'unmute' : 'mute', true);
                             }}
                             className={`relative p-2.5 rounded-2xl transition flex items-center justify-center border cursor-pointer active:scale-90 shadow-xs group ${
@@ -3685,26 +3464,81 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                       </div>
                     )}
 
-                    {/* Footer Actions: Receive (Green) vs Reject (Red) */}
-                    <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleRejectLiveOffer(selectedOfferForModal)}
-                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 hover:text-rose-200 border border-rose-500/30 font-bold text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-1.5"
-                      >
-                        <X className="w-4 h-4 text-rose-400" />
-                        <span>বাতিল করুন</span>
-                      </button>
+                    {/* Received status banner inside modal */}
+                    {receivedOfferIds.includes(selectedOfferForModal.id) && (
+                      <div className="p-3.5 bg-emerald-500/15 border border-[#1DB954]/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-emerald-300 animate-fadeIn">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-[#1DB954] shrink-0" />
+                          <span className="text-xs sm:text-sm font-black">
+                            🎉 অফারটি সফলভাবে রিসিভ করা হয়েছে! প্রজেক্টটি আপনার ক্লায়েন্ট অর্ডার তালিকায় সক্রিয় আছে।
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedOfferForModal(null);
+                            setSpecialistMainTab('marketplace');
+                            setSellerSubTab('orders');
+                          }}
+                          className="px-3.5 py-1.5 bg-[#1DB954] hover:bg-[#19a34a] text-slate-950 font-black text-xs rounded-xl shadow-md transition cursor-pointer self-end sm:self-auto shrink-0"
+                        >
+                          অর্ডার দেখুন
+                        </button>
+                      </div>
+                    )}
 
-                      <button
-                        type="button"
-                        onClick={() => handleReceiveLiveOffer(selectedOfferForModal)}
-                        className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-[#1DB954] to-emerald-400 hover:from-emerald-400 hover:to-[#1DB954] text-slate-950 font-black rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#1DB954]/25 hover:scale-105 active:scale-95 transition cursor-pointer"
-                      >
-                        <Zap className="w-4 h-4 fill-slate-950 text-slate-950" />
-                        <span>রিসিভ করুন (৳{selectedOfferForModal.budget.toLocaleString()})</span>
-                      </button>
-                    </div>
+                    {/* Footer Actions: Receive (Green) vs Reject (Red) vs Received State */}
+                    {receivedOfferIds.includes(selectedOfferForModal.id) ? (
+                      <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <span className="text-xs sm:text-sm font-black text-emerald-400 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-[#1DB954]" />
+                          <span>অর্ডার সফলভাবে রিসিভড & অ্যাক্টিভ</span>
+                        </span>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOfferForModal(null)}
+                            className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-bold transition cursor-pointer"
+                          >
+                            বন্ধ করুন
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedOfferForModal(null);
+                              setSpecialistMainTab('marketplace');
+                              setSellerSubTab('orders');
+                            }}
+                            className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#19a34a] text-slate-950 font-black text-xs sm:text-sm transition cursor-pointer shadow-md"
+                          >
+                            কাজে যান
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleRejectLiveOffer(selectedOfferForModal);
+                            setSelectedOfferForModal(null);
+                          }}
+                          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 hover:text-rose-200 border border-rose-500/30 font-bold text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <X className="w-4 h-4 text-rose-400" />
+                          <span>বাতিল করুন</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleReceiveLiveOffer(selectedOfferForModal)}
+                          className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-[#1DB954] to-emerald-400 hover:from-emerald-400 hover:to-[#1DB954] text-slate-950 font-black rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#1DB954]/25 hover:scale-105 active:scale-95 transition cursor-pointer"
+                        >
+                          <Zap className="w-4 h-4 fill-slate-950 text-slate-950" />
+                          <span>রিসিভ করুন (৳{selectedOfferForModal.budget.toLocaleString()})</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -3790,19 +3624,26 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                                       setIsSeeAllOffersModalOpen(false);
                                       setSelectedOfferForModal(offer);
                                     }}
-                                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-white/10"
+                                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-white/10 cursor-pointer"
                                   >
                                     বিস্তারিত
                                   </button>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => handleReceiveLiveOffer(offer)}
-                                    className="px-3.5 py-1.5 bg-[#1DB954] hover:bg-[#19a34a] text-slate-950 font-black rounded-xl text-xs flex items-center gap-1 shadow-md cursor-pointer"
-                                  >
-                                    <Zap className="w-3.5 h-3.5 fill-slate-950" />
-                                    <span>রিসিভ</span>
-                                  </button>
+                                  {receivedOfferIds.includes(offer.id) ? (
+                                    <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold text-xs border border-emerald-500/30 flex items-center gap-1">
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-[#1DB954]" />
+                                      <span>রিসিভড</span>
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReceiveLiveOffer(offer)}
+                                      className="px-3.5 py-1.5 bg-[#1DB954] hover:bg-[#19a34a] text-slate-950 font-black rounded-xl text-xs flex items-center gap-1 shadow-md cursor-pointer"
+                                    >
+                                      <Zap className="w-3.5 h-3.5 fill-slate-950" />
+                                      <span>রিসিভ</span>
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -3858,7 +3699,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                         <span className={`block text-xs sm:text-sm font-bold truncate mt-1 ${
                           specialistMainTab === 'marketplace' ? 'text-slate-950/90 font-black' : 'text-slate-500 dark:text-slate-400'
                         }`}>
-                          ক্লায়েন্ট অর্ডারস (32) • সার্ভিসেস ({sellerGigs.length || 2})
+                          ক্লায়েন্ট অর্ডারস ({marketplaceOrders.length}) • সার্ভিসেস ({sellerGigs.length || 2})
                         </span>
                       </div>
                     </div>
@@ -4078,7 +3919,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                           }`}
                         >
                           <ShoppingBag className="w-4 h-4" />
-                          <span>ক্লায়েন্ট অর্ডারস (32)</span>
+                          <span>ক্লায়েন্ট অর্ডারস ({marketplaceOrders.length})</span>
                         </button>
 
                         <button
@@ -4338,9 +4179,14 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                         onClick={() => {
                           const nextState = !isToolkitSoundOn;
                           setIsToolkitSoundOn(nextState);
+                          setIsOfferSoundEnabled(nextState);
                           try {
                             localStorage.setItem('ptenit_toolkit_sound', String(nextState));
+                            localStorage.setItem('ptenit_offer_sound_enabled', JSON.stringify(nextState));
                           } catch {}
+                          if (!nextState) {
+                            stopOfferNotificationSound();
+                          }
                           playToolkitSound(nextState ? 'unmute' : 'mute', true);
                         }}
                         className={`relative p-2 sm:px-3 sm:py-2 rounded-xl transition flex items-center justify-center border cursor-pointer active:scale-90 shadow-xs group ${
@@ -4561,7 +4407,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                     </div>
                   )}
 
-                  {/* SUBTAB: Active Client Orders & Admin Offers Workspace */}
+                  {/* SUBTAB: Active Client Orders Workspace */}
                   {specialistMainTab === 'marketplace' && sellerSubTab === 'orders' && (
                     <div id="seller-orders-section" className="space-y-6 animate-fadeIn font-bengali">
                       {/* Filter Header & Stats */}
@@ -4571,32 +4417,8 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                             <div>
                               <h3 className="text-sm sm:text-base lg:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                                 <Package className="w-5 h-5 text-[#1DB954]" />
-                                <span>ক্লায়েন্ট অর্ডারস ও অ্যাডমিন অফারস</span>
+                                <span>ক্লায়েন্ট অর্ডারস</span>
                               </h3>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={toggleOfferSound}
-                                className={`relative p-2 sm:px-2.5 sm:py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs active:scale-90 group ${
-                                  isOfferSoundEnabled
-                                    ? 'bg-emerald-500/10 text-[#1DB954] border-emerald-500/30 hover:bg-emerald-500/20'
-                                    : 'bg-rose-500/10 text-rose-500 border-rose-500/30 hover:bg-rose-500/20'
-                                }`}
-                                title={isOfferSoundEnabled ? "অফার সাউন্ড চালু আছে (ক্লিক করলে বন্ধ হবে)" : "অফার সাউন্ড বন্ধ আছে (ক্লিক করলে চালু হবে)"}
-                              >
-                                {isOfferSoundEnabled ? (
-                                  <>
-                                    <Volume2 className="w-4 h-4 text-[#1DB954] group-hover:scale-110 transition-transform" />
-                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1DB954] ring-2 ring-white dark:ring-slate-900 animate-pulse" />
-                                  </>
-                                ) : (
-                                  <>
-                                    <VolumeX className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" />
-                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
-                                  </>
-                                )}
-                              </button>
                             </div>
                           </div>
 
@@ -4605,11 +4427,11 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                         {/* Status Filter Tabs - Single Line Layout */}
                         <div className="grid grid-cols-5 gap-1 sm:gap-2 pt-1">
                           {(() => {
-                            const pendingOrdersCount = marketplaceOrders.filter(o => o.status === 'pending' || o.status === 'pending_approval').length + offeredCourses.length;
+                            const pendingOrdersCount = marketplaceOrders.filter(o => o.status === 'pending' || o.status === 'pending_approval').length;
                             const inProgressCount = marketplaceOrders.filter(o => o.status === 'in_progress').length;
                             const inReviewCount = marketplaceOrders.filter(o => o.status === 'in_review' || o.status === 'revision_requested').length;
                             const completedCount = marketplaceOrders.filter(o => o.status === 'completed').length;
-                            const totalCount = marketplaceOrders.length + offeredCourses.length;
+                            const totalCount = marketplaceOrders.length;
 
                             return [
                               { id: 'all', label: 'সকল অর্ডার', count: totalCount, icon: Package, color: 'text-[#1DB954]' },
@@ -4647,8 +4469,6 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
 
                         {/* Filtered Order List */}
                         {(() => {
-                          const showCourseOffers = offeredCourses.length > 0 && (sellerOrderFilter === 'all' || sellerOrderFilter === 'pending');
-                          
                           const filtered = marketplaceOrders.filter(o => {
                             if (sellerOrderFilter === 'all') return true;
                             if (sellerOrderFilter === 'pending') return o.status === 'pending' || o.status === 'pending_approval';
@@ -4658,166 +4478,17 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                             return true;
                           });
 
-                          if (!showCourseOffers && filtered.length === 0) {
+                          if (filtered.length === 0) {
                             return (
                               <div className="p-8 text-center text-slate-400 space-y-2">
                                 <Package className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700" />
-                                <p className="text-xs font-bold">এই ফিল্টারে কোনো প্রজেক্ট অর্ডার বা অফার পাওয়া যায়নি</p>
+                                <p className="text-xs font-bold">এই ফিল্টারে কোনো ক্লায়েন্ট অর্ডার পাওয়া যায়নি</p>
                               </div>
                             );
                           }
 
                           return (
                             <div className="space-y-4">
-                              {/* COURSE OFFERS DIRECTLY AS ORDER CARDS IN SAME LIST */}
-                              {showCourseOffers && offeredCourses.map(course => {
-                                const isExpanded = !!expandedSellerOrders[`course_${course.id}`];
-                                return (
-                                  <div
-                                    key={course.id}
-                                    className="border rounded-2xl p-4 sm:p-5 shadow-sm transition-all duration-200 space-y-3.5 hover:shadow-md border-l-8 border-l-amber-500 bg-gradient-to-r from-amber-500/15 via-slate-50/50 to-white dark:from-amber-950/40 dark:via-slate-900 dark:to-slate-900 border-amber-500/30 shadow-md font-bengali"
-                                  >
-                                    {/* Top Main Details Bar */}
-                                    <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-                                      <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
-                                        <span className="px-2.5 py-1 bg-slate-900 text-white dark:bg-slate-800 dark:text-slate-200 font-mono text-xs font-black rounded-lg shrink-0 border border-slate-700 shadow-2xs">
-                                          #{course.id.slice(-8).toUpperCase()}
-                                        </span>
-                                        <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate max-w-[260px] sm:max-w-[360px]" title={course.title}>
-                                          {course.title}
-                                        </h3>
-                                        <span className="hidden sm:inline-block px-3 py-1 bg-amber-500/15 text-amber-600 dark:text-amber-300 text-xs font-black rounded-full border border-amber-500/30 shrink-0">
-                                          কোর্স অফার • {course.category}
-                                        </span>
-                                      </div>
-
-                                      <div className="flex items-center gap-3 shrink-0 ml-auto">
-                                        <div className="text-right">
-                                          <span className="text-base sm:text-lg font-black text-[#1DB954] block leading-none">
-                                            ৳{(course.price || 5000).toLocaleString('bn-BD')}
-                                          </span>
-                                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold block mt-0.5">
-                                            কমিশন: {course.teacherCommissionRate || 35}% (৳{Math.round((course.price || 5000) * ((course.teacherCommissionRate || 35) / 100)).toLocaleString('bn-BD')})
-                                          </span>
-                                        </div>
-
-                                        {/* Status Badge */}
-                                        <span className="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 bg-amber-500 text-slate-950 font-black border-amber-500">
-                                          <Clock className="w-3.5 h-3.5 shrink-0" />
-                                          <span>📩 নতুন কোর্স অফার</span>
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {/* Sender Info & Action Row */}
-                                    <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-200/80 dark:border-slate-800/80 text-sm flex-wrap sm:flex-nowrap">
-                                      <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-wrap sm:flex-nowrap">
-                                        {/* Sender Avatar & Name */}
-                                        <div className="flex items-center gap-2 shrink-0">
-                                          <div className="w-7 h-7 rounded-full bg-slate-900 text-white dark:bg-slate-800 flex items-center justify-center font-bold text-xs shrink-0 border-2 border-amber-500">
-                                            <ShieldCheck className="w-4 h-4 text-amber-400" />
-                                          </div>
-                                          <div className="min-w-0">
-                                            <span className="text-[10px] text-slate-400 font-bold block leading-none">প্রেরক</span>
-                                            <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate max-w-[140px]">
-                                              মেইন এডমিন (অফিশিয়াল)
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold shrink-0 flex items-center gap-1.5 px-1 py-0.5">
-                                          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                          <span>অপেক্ষমাণ অফার</span>
-                                        </span>
-                                      </div>
-
-                                      {/* Action Buttons */}
-                                      <div className="flex items-center gap-2 shrink-0 ml-auto">
-                                        <button
-                                          onClick={() => openChatWindow({
-                                            senderName: 'Main Admin',
-                                            senderRole: 'admin',
-                                            initialMessage: `আসসালামু আলাইকুম এডমিন! কোর্স অফার #${course.id.slice(-6)} ("${course.title}") নিয়ে কথা বলার জন্য মেসেজ পাঠাচ্ছি।`
-                                          })}
-                                          className="px-3.5 py-1.5 bg-[#1DB954] hover:bg-[#19a34a] text-slate-950 font-black text-xs sm:text-sm rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
-                                          title="এডমিনকে মেসেজ দিন"
-                                        >
-                                          <MessageCircle className="w-4 h-4 text-slate-950" />
-                                          <span>মেসেজ</span>
-                                        </button>
-
-                                        <button
-                                          onClick={() => {
-                                            stopOfferNotificationSound();
-                                            acceptCourseOffer(course.id, currentUser?.id, currentUser?.name);
-                                            setSwitchSuccessMsg(`🎉 '${course.title}' কোর্স অফারটি সফলভাবে রিসিভ করা হয়েছে! মেন্টর সার্ভিস অ্যাক্টিভ করা হয়েছে।`);
-                                            setTimeout(() => setSwitchSuccessMsg(''), 5000);
-                                          }}
-                                          className="px-3.5 py-1.5 bg-gradient-to-r from-[#1DB954] to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black text-xs sm:text-sm rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
-                                        >
-                                          <CheckCircle2 className="w-4 h-4 text-slate-950" />
-                                          <span>রিসিভ করুন</span>
-                                        </button>
-
-                                        <button
-                                          onClick={() => {
-                                            stopOfferNotificationSound();
-                                            declineCourseOffer(course.id);
-                                          }}
-                                          className="px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/20 text-slate-600 dark:text-slate-300 hover:text-rose-500 font-bold text-xs sm:text-sm rounded-xl transition border border-slate-200 dark:border-slate-700 cursor-pointer flex items-center gap-1 active:scale-95"
-                                        >
-                                          <X className="w-4 h-4" />
-                                          <span>প্রত্যাখ্যান</span>
-                                        </button>
-
-                                        <button
-                                          onClick={() => setExpandedSellerOrders(prev => ({ ...prev, [`course_${course.id}`]: !prev[`course_${course.id}`] }))}
-                                          className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs sm:text-sm rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm"
-                                        >
-                                          <span>{isExpanded ? 'সংক্ষেপ' : 'বিস্তারিত'}</span>
-                                          {isExpanded ? <ChevronUp className="w-4 h-4 text-white" /> : <ChevronDown className="w-4 h-4 text-white" />}
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    {/* Expandable Details Section */}
-                                    {isExpanded && (
-                                      <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3 animate-fadeIn text-xs sm:text-sm">
-                                        <div className="bg-slate-50 dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-                                          <h4 className="font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                                            <FileText className="w-4 h-4 text-[#1DB954]" />
-                                            <span>কোর্সের বিবরণ & লক্ষ্যমাত্রা:</span>
-                                          </h4>
-                                          <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                                            {course.description}
-                                          </p>
-                                        </div>
-
-                                        <div className="grid grid-cols-3 gap-2 p-3 bg-amber-500/5 dark:bg-amber-950/20 rounded-xl border border-amber-500/20 text-center">
-                                          <div>
-                                            <span className="text-[10px] text-slate-400 block font-bold">মডিউল টার্গেট</span>
-                                            <span className="font-extrabold text-xs sm:text-sm text-slate-800 dark:text-slate-200">
-                                              {course.targetModules || 4}টি
-                                            </span>
-                                          </div>
-                                          <div>
-                                            <span className="text-[10px] text-slate-400 block font-bold">ক্লাস টার্গেট</span>
-                                            <span className="font-extrabold text-xs sm:text-sm text-slate-800 dark:text-slate-200">
-                                              {course.targetLessons || 16}টি
-                                            </span>
-                                          </div>
-                                          <div>
-                                            <span className="text-[10px] text-slate-400 block font-bold">শিক্ষক কমিশন হার</span>
-                                            <span className="font-black text-xs sm:text-sm text-emerald-600 dark:text-[#1DB954]">
-                                              {course.teacherCommissionRate || 35}% ফি
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
                               {filtered.map(ord => {
                                 const isPendingApproval = ord.status === 'pending_approval';
                                 const isPending = ord.status === 'pending';
@@ -6604,9 +6275,14 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                             onClick={() => {
                               const nextState = !isToolkitSoundOn;
                               setIsToolkitSoundOn(nextState);
+                              setIsOfferSoundEnabled(nextState);
                               try {
                                 localStorage.setItem('ptenit_toolkit_sound', String(nextState));
+                                localStorage.setItem('ptenit_offer_sound_enabled', JSON.stringify(nextState));
                               } catch {}
+                              if (!nextState) {
+                                stopOfferNotificationSound();
+                              }
                               playToolkitSound(nextState ? 'unmute' : 'mute', true);
                             }}
                             className={`relative p-2 rounded-xl transition flex items-center justify-center border cursor-pointer active:scale-90 shadow-xs group ${
@@ -9565,6 +9241,198 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* FLOATING LIVE OFFER / ORDER NOTIFICATION BAR (কাজের নিচে ফ্লোটিং নোটিফিকেশন) */}
+      {/* ========================================================================= */}
+      {activeOffersList.length > 0 && activeOffersList[activeOfferIndex % activeOffersList.length] && (
+        <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-3xl animate-slideUp font-bengali">
+          {(() => {
+            const currentOffer = activeOffersList[activeOfferIndex % activeOffersList.length];
+            const timerPercentage = totalOfferDuration > 0 ? (offerCountdown / totalOfferDuration) * 100 : 0;
+            const isBeingActioned = justActionedOfferId === currentOffer.id;
+
+            return (
+              <div
+                onMouseEnter={() => setIsOfferPaused(true)}
+                onMouseLeave={() => setIsOfferPaused(false)}
+                className={`relative overflow-hidden backdrop-blur-2xl bg-slate-950/95 border ${
+                  currentOffer.type === 'personal'
+                    ? 'border-amber-500/50 shadow-amber-500/20'
+                    : 'border-[#1DB954]/50 shadow-[#1DB954]/20'
+                } rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 shadow-2xl shadow-black/90 transition-all duration-300 group ring-1 ring-white/10`}
+              >
+                {/* Ambient Glow */}
+                <div className={`absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl pointer-events-none transition-all duration-500 ${
+                  currentOffer.type === 'personal' ? 'bg-amber-500/20' : 'bg-[#1DB954]/20'
+                }`} />
+
+                {/* Compact Main Row */}
+                <div className="flex items-center justify-between gap-3 relative z-10">
+                  {/* Left: Avatar + Badge + Short Title */}
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div className="relative shrink-0">
+                      <img
+                        src={currentOffer.clientAvatar}
+                        alt={currentOffer.clientName}
+                        className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl object-cover border-2 border-[#1DB954] shadow-md"
+                      />
+                      <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${
+                        currentOffer.type === 'personal' ? 'bg-amber-400 animate-pulse' : 'bg-[#1DB954] animate-ping'
+                      }`} />
+                      <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${
+                        currentOffer.type === 'personal' ? 'bg-amber-400' : 'bg-[#1DB954]'
+                      }`} />
+                    </div>
+
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {currentOffer.type === 'personal' ? (
+                          <span className="text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-md border border-amber-400/60 bg-amber-500/20 text-amber-300 flex items-center gap-1">
+                            <Lock className="w-2.5 h-2.5 text-amber-400" />
+                            <span>পার্সোনাল অর্ডার</span>
+                          </span>
+                        ) : currentOffer.type === 'course' ? (
+                          <span className="text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-md border border-cyan-400/50 bg-cyan-500/20 text-cyan-300 flex items-center gap-1">
+                            <GraduationCap className="w-2.5 h-2.5 text-cyan-400" />
+                            <span>কোর্স অফার</span>
+                          </span>
+                        ) : (
+                          <span className="text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-md border border-emerald-500/40 bg-emerald-500/20 text-emerald-300 flex items-center gap-1">
+                            <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                            <span>লাইভ অফার</span>
+                          </span>
+                        )}
+                        
+                        <span className="text-[11px] font-bold text-slate-300 truncate max-w-[100px] sm:max-w-none">
+                          {currentOffer.clientName}
+                        </span>
+                        {currentOffer.isVerified && (
+                          <BadgeCheck className="w-3 h-3 text-[#1DB954] shrink-0" />
+                        )}
+                      </div>
+
+                      <p className="text-xs sm:text-sm font-black text-white truncate max-w-[180px] sm:max-w-md">
+                        {currentOffer.title}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Middle: Budget & Timer */}
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                    <div className="text-right">
+                      <div className="text-sm sm:text-base font-black text-[#1DB954] drop-shadow-sm leading-tight">
+                        ৳{currentOffer.budget.toLocaleString()}
+                      </div>
+                      <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold flex items-center justify-end gap-1">
+                        <Clock className="w-2.5 h-2.5 text-slate-400" />
+                        <span>{currentOffer.deadline}</span>
+                      </div>
+                    </div>
+
+                    {/* Countdown badge */}
+                    <div
+                      className="flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-slate-900 border border-amber-400/40 text-amber-300 rounded-lg text-[10px] sm:text-xs font-black shadow-inner shrink-0"
+                      title={isOfferPaused ? "পজ করা আছে (মাউস সরানো হলে আবার চলবে)" : "কাউন্টডাউন চলছে"}
+                    >
+                      <Clock className={`w-3 h-3 text-amber-400 ${isOfferPaused ? '' : 'animate-spin'}`} style={{ animationDuration: '4s' }} />
+                      <span className="font-mono text-white bg-amber-500/25 px-1 rounded">
+                        {offerCountdown}s
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right: Action Buttons */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    {/* View Details */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOfferForModal(currentOffer)}
+                      className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-[11px] sm:text-xs border border-white/10 transition cursor-pointer flex items-center gap-1 active:scale-95"
+                      title="বিস্তারিত দেখুন"
+                    >
+                      <Info className="w-3 h-3 text-[#1DB954]" />
+                      <span className="hidden sm:inline">বিস্তারিত</span>
+                    </button>
+
+                    {/* Receive Button */}
+                    {isBeingActioned && offerActionType === 'received' ? (
+                      <button
+                        disabled
+                        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-emerald-500 text-slate-950 font-black rounded-xl text-[11px] sm:text-xs flex items-center gap-1 shadow-md shadow-emerald-500/30 animate-pulse"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-slate-950" />
+                        <span>রিসিভড!</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleReceiveLiveOffer(currentOffer)}
+                        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-[#1DB954] to-emerald-400 hover:from-emerald-400 hover:to-[#1DB954] text-slate-950 font-black rounded-xl text-[11px] sm:text-xs flex items-center gap-1 shadow-lg shadow-[#1DB954]/25 hover:shadow-[#1DB954]/40 hover:scale-105 active:scale-95 transition cursor-pointer"
+                      >
+                        <Zap className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
+                        <span>রিসিভ</span>
+                      </button>
+                    )}
+
+                    {/* All Offers Modal Toggle (if > 1) */}
+                    {activeOffersList.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsSeeAllOffersModalOpen(true)}
+                        className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 text-[10px] font-black transition cursor-pointer active:scale-95 hidden xs:flex items-center gap-0.5"
+                        title="সকল অফার দেখুন"
+                      >
+                        <span>({activeOffersList.length})</span>
+                      </button>
+                    )}
+
+                    {/* Next arrow if > 1 */}
+                    {activeOffersList.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveOfferIndex((curr) => (curr + 1) % activeOffersList.length)}
+                        className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 transition cursor-pointer active:scale-95"
+                        title="পরবর্তী অফার"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Smooth Bottom Progress Line */}
+                <div className="w-full bg-slate-800/80 rounded-full h-1 mt-2 sm:mt-2.5 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-amber-400 via-[#1DB954] to-emerald-400 h-full rounded-full transition-all duration-1000 ease-linear shadow-xs"
+                    style={{ width: `${timerPercentage}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* FLOATING ACTION/SUCCESS TOAST (নিচে শর্ট ফ্লোটিং নোটিফিকেশন) */}
+      {/* ========================================================================= */}
+      {switchSuccessMsg && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slideUp font-bengali max-w-[95vw] sm:max-w-md">
+          <div className="flex items-center gap-2.5 px-4 py-2.5 bg-slate-950/95 backdrop-blur-xl border border-[#1DB954]/60 text-white shadow-2xl shadow-black/90 rounded-2xl text-xs sm:text-sm font-black ring-1 ring-white/10">
+            <CheckCircle2 className="w-4 h-4 text-[#1DB954] shrink-0 animate-pulse" />
+            <span className="truncate flex-1">{switchSuccessMsg}</span>
+            <button
+              type="button"
+              onClick={() => setSwitchSuccessMsg('')}
+              className="ml-1.5 p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition cursor-pointer text-xs"
+              title="বন্ধ করুন"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}
