@@ -53,7 +53,8 @@ import {
   Inbox,
   Layers,
   ExternalLink,
-  Video
+  Video,
+  Percent
 } from 'lucide-react';
 
 interface CompanyBillItem {
@@ -272,8 +273,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
   ];
 
   // Marketplace Admin Management States
-  const [mktAdminSubTab, setMktAdminSubTab] = useState<'overview' | 'gigs' | 'jobs' | 'orders' | 'settings'>('overview');
+  const [mktAdminSubTab, setMktAdminSubTab] = useState<'overview' | 'gigs' | 'jobs' | 'orders' | 'categories' | 'settings'>('overview');
   const [mktCommissionRate, setMktCommissionRate] = useState<number>(10);
+  const [trainerRevShareRate, setTrainerRevShareRate] = useState<number>(90);
+  const [clientProcessingFeePercent, setClientProcessingFeePercent] = useState<number>(0);
+  const [freelancerWithdrawalFeePercent, setFreelancerWithdrawalFeePercent] = useState<number>(1.5);
+  const [feeSimulatorAmount, setFeeSimulatorAmount] = useState<number>(10000);
+  const [feeSaveSuccess, setFeeSaveSuccess] = useState<boolean>(false);
   const [gigSearchFilter, setGigSearchFilter] = useState<string>('');
   const [gigStatusFilter, setGigStatusFilter] = useState<string>('all');
 
@@ -1338,13 +1344,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                     {
                       id: 'marketplace',
                       label: '৩. মার্কেটপ্লেস',
-                      subText: 'গিগ আপলোড, জবস & ক্লায়েন্টস',
+                      subText: 'গিগ আপলোড, সার্ভিস & ক্লায়েন্টস',
                       icon: ShoppingBag,
-                      badge: openJobs > 0 ? openJobs : undefined,
+                      badge: gigs.length > 0 ? gigs.length : undefined,
                       isActive: activeMainModule === 'marketplace',
                       onClick: () => {
                         setActiveMainModule('marketplace');
-                        if (!['gigs_manage', 'marketplace', 'agency_clients', 'billing_verify', 'financials'].includes(activeAdminTab)) {
+                        if (!['gigs_manage', 'agency_clients', 'billing_verify', 'financials'].includes(activeAdminTab)) {
                           setActiveAdminTab('gigs_manage');
                         }
                       }
@@ -1352,12 +1358,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                     {
                       id: 'settings',
                       label: '৪. সেটিংস',
-                      subText: 'সাইট কনফিগ, গ্যালারি & পেজ',
+                      subText: 'সাইট কনফিগ, ফি & কমিশন',
                       icon: Settings,
                       isActive: activeMainModule === 'settings',
                       onClick: () => {
                         setActiveMainModule('settings');
-                        if (!['settings', 'sub_admins', 'gallery', 'methods_setup', 'pixel_setup', 'payment_methods', 'written_content', 'responsive_setup', 'tax_vat'].includes(activeAdminTab) && !activeAdminTab.startsWith('custom_')) {
+                        if (!['settings', 'sub_admins', 'gallery', 'methods_setup', 'pixel_setup', 'payment_methods', 'written_content', 'responsive_setup', 'tax_vat', 'fee_commission'].includes(activeAdminTab) && !activeAdminTab.startsWith('custom_')) {
                           setActiveAdminTab('settings');
                         }
                       }
@@ -1886,7 +1892,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
         {/* SUB-TABS BAR (ট্যাববার - প্রতিটি মূল মডিউলের বিষয়ভিত্তিক বিস্তারিত সাব-ট্যাবস) */}
         {(() => {
           const currentModule = activeMainModule === 'dashboard'
-            ? (['courses', 'teachers', 'students', 'orders', 'billing_verify'].includes(activeAdminTab) ? 'academy' : ['services', 'marketplace', 'agency_clients', 'gigs_manage', 'office_projects', 'financials'].includes(activeAdminTab) ? 'marketplace' : ['settings', 'gallery', 'pixel_setup', 'payment_methods', 'written_content', 'responsive_setup', 'tax_vat'].includes(activeAdminTab) || activeAdminTab.startsWith('custom_') ? 'settings' : 'dashboard')
+            ? (['courses', 'teachers', 'students', 'orders', 'billing_verify'].includes(activeAdminTab) ? 'academy' : ['services', 'marketplace', 'agency_clients', 'gigs_manage', 'office_projects', 'financials'].includes(activeAdminTab) ? 'marketplace' : ['settings', 'gallery', 'pixel_setup', 'payment_methods', 'written_content', 'responsive_setup', 'tax_vat', 'fee_commission'].includes(activeAdminTab) || activeAdminTab.startsWith('custom_') ? 'settings' : 'dashboard')
             : activeMainModule;
 
           if (currentModule === 'dashboard') {
@@ -1911,7 +1917,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
             categoryColor = 'text-purple-400';
             subTabs = [
               { id: 'gigs_manage', label: 'গিগ আপলোড & কাজ', icon: ShoppingBag, badge: gigs.length },
-              { id: 'marketplace', label: 'জবস & কাজ', icon: ShoppingBag, badge: jobs.filter(j => j.status === 'open').length },
               { id: 'agency_clients', label: 'ক্লায়েন্টস', icon: Building2 },
               { id: 'billing_verify', label: '⚡ বিল লেজার & অটো-ভেরিফাই', icon: ShieldCheck, badge: companyBills.filter(b => b.status === 'pending').length },
               { id: 'financials', label: 'মার্কেটপ্লেস ফিনান্সিয়ালস', icon: DollarSign }
@@ -1927,6 +1932,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
               { id: 'written_content', label: '৫. সকল লিখিত কনটেন', icon: FileText },
               { id: 'responsive_setup', label: '৬. রেসপন্সিভ (১০০% ফিট)', icon: Monitor },
               { id: 'tax_vat', label: '৭. সকল ট্যাক্স & ভ্যাট', icon: ShieldCheck },
+              { id: 'fee_commission', label: '৮. প্ল্যাটফর্ম ফি & কমিশন কন্ট্রোলার', icon: Percent },
               ...customAdminPages.map(cp => ({
                 id: cp.id,
                 label: cp.label,
@@ -5216,7 +5222,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                   { id: 'gigs', label: 'গিগ সার্ভিসেস', icon: ShoppingBag },
                   { id: 'jobs', label: 'বায়ার ব্রিফ ও ডেসপ্যাচ', icon: Send },
                   { id: 'orders', label: 'এস্ক্রো অর্ডাস & ডিসপ্যুট', icon: ShieldCheck },
-                  { id: 'categories', label: 'ক্যাটাগরি কন্ট্রোল', icon: Tag },
+                  { id: 'categories', label: 'ক্যাটাগরি & ফিল্টার', icon: Tag },
                 ].map(tab => {
                   const Icon = tab.icon;
                   return (
@@ -5697,7 +5703,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
                 <h3 className="text-base font-black text-white flex items-center gap-2">
                   <Tag className="w-5 h-5 text-[#1DB954]" />
-                  <span>মার্কেটপ্লেস ক্যাটাগরি ও সার্ভিস ফিল্টার ম্যানেজার</span>
+                  <span>ক্যাটাগরি & সার্ভিস ফিল্টার</span>
                 </h3>
 
                 <div className="flex items-center gap-2 max-w-md">
@@ -6805,6 +6811,316 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                 </button>
               </form>
             </div>
+          </div>
+        )}
+
+        {/* TAB 7.8: PLATFORM FEE & COMMISSION RATE CONTROLLER */}
+        {activeAdminTab === 'fee_commission' && (
+          <div className="space-y-6 font-bengali">
+            {/* Top Header Banner */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                    <Percent className="w-6 h-6 text-[#1DB954]" /> প্ল্যাটফর্ম ফি & কমিশন রেট কন্ট্রোলার
+                  </h2>
+                  <span className="px-3 py-1 bg-emerald-500/20 text-[#1DB954] text-xs font-black rounded-full border border-emerald-500/40 flex items-center gap-1.5 animate-pulse">
+                    <Zap className="w-3.5 h-3.5" />
+                    সক্রিয় কমিশন: {mktCommissionRate}%
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300">
+                  মার্কেটপ্লেস গিগ, প্রজেক্ট এস্ক্রো কমিশন, একাডেমি ট্রেইনার রেভিনিউ শেয়ার এবং উইথড্রয়াল প্রসেসিং ফি এর রিয়েল-টাইম কনফিগারেশন।
+                </p>
+              </div>
+
+              {/* Quick Presets */}
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                <span className="text-xs font-bold text-slate-400">প্রিসেট:</span>
+                {[
+                  { label: 'প্রমোশনাল (৫%)', val: 5, bg: 'bg-sky-500/20 text-sky-300 border-sky-500/40' },
+                  { label: 'স্ট্যান্ডার্ড (১০%)', val: 10, bg: 'bg-emerald-500/20 text-[#1DB954] border-emerald-500/40' },
+                  { label: 'প্রিমিয়াম (১৫%)', val: 15, bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40' },
+                  { label: 'হাই মার্জিন (২০%)', val: 20, bg: 'bg-purple-500/20 text-purple-300 border-purple-500/40' }
+                ].map(preset => (
+                  <button
+                    key={preset.val}
+                    onClick={() => {
+                      setMktCommissionRate(preset.val);
+                      setFeeSaveSuccess(true);
+                      setTimeout(() => setFeeSaveSuccess(false), 3000);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black border cursor-pointer transition-all hover:scale-105 ${
+                      mktCommissionRate === preset.val ? preset.bg + ' ring-2 ring-[#1DB954]' : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {feeSaveSuccess && (
+              <div className="p-4 bg-emerald-500/20 border border-emerald-500/50 text-[#1DB954] font-black rounded-2xl text-xs flex items-center justify-between shadow-lg">
+                <div className="flex items-center gap-2">
+                  <Check className="w-5 h-5" />
+                  <span>প্ল্যাটফর্ম ফি & কমিশন সেটিংস সফলভাবে সেভ ও কার্যকর হয়েছে!</span>
+                </div>
+                <span className="text-[11px] font-mono bg-emerald-950/60 px-2.5 py-1 rounded-lg">LIVE RATE: {mktCommissionRate}%</span>
+              </div>
+            )}
+
+            {/* Core Commission Settings Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Card 1: Marketplace & Escrow Commission */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-5 shadow-xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <ShoppingBag className="w-5 h-5 text-purple-400" />
+                    <span>মার্কেটপ্লেস ও এস্ক্রো প্রজেক্ট কমিশন</span>
+                  </h3>
+                  <span className="px-2.5 py-1 bg-purple-500/20 text-purple-300 text-xs font-black rounded-lg border border-purple-500/30">
+                    ১০% ডিফল্ট
+                  </span>
+                </div>
+
+                {/* Marketplace Commission Slider & Input */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-xs font-bold text-slate-300">
+                    <label>এডমিন প্ল্যাটফর্ম কমিশন রেট (%)</label>
+                    <span className="text-lg font-black text-[#1DB954]">{mktCommissionRate}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={50}
+                    step={1}
+                    value={mktCommissionRate}
+                    onChange={(e) => setMktCommissionRate(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-[#1DB954]"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>০% (ফ্রি)</span>
+                    <span>২৫% (মিডিয়াম)</span>
+                    <span>৫০% (সর্বোচ্চ)</span>
+                  </div>
+                </div>
+
+                {/* Auto Ratio Breakdown */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="bg-slate-950 p-3.5 rounded-2xl border border-emerald-500/20">
+                    <p className="text-[11px] text-slate-400 font-bold">এডমিন নিট কমিশন</p>
+                    <p className="text-xl font-black text-[#1DB954] mt-1">{mktCommissionRate}%</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">প্রতিটি অর্ডারে প্ল্যাটফর্ম আয়</p>
+                  </div>
+                  <div className="bg-slate-950 p-3.5 rounded-2xl border border-amber-500/20">
+                    <p className="text-[11px] text-slate-400 font-bold">সেলার / ফ্রিল্যান্সার পে</p>
+                    <p className="text-xl font-black text-amber-400 mt-1">{100 - mktCommissionRate}%</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">ফ্রিল্যান্সারের প্রাপ্য পেআউট</p>
+                  </div>
+                </div>
+
+                {/* Additional Marketplace Fees */}
+                <div className="space-y-4 pt-2 border-t border-slate-800/80">
+                  <div>
+                    <label className="block text-xs font-bold mb-1 text-slate-300">
+                      ক্লায়েন্ট অর্ডার চেকআউট ফি (%)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={15}
+                        step={0.5}
+                        value={clientProcessingFeePercent}
+                        onChange={(e) => setClientProcessingFeePercent(Number(e.target.value) || 0)}
+                        className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs font-bold text-white focus:outline-none focus:border-[#1DB954]"
+                      />
+                      <span className="text-xs font-bold text-slate-400 shrink-0">% অতিরিক্ত</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">ক্লায়েন্ট পেমেন্ট করার সময় এই % গেটওয়ে ফি যুক্ত হবে।</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold mb-1 text-slate-300">
+                      ফ্রিল্যান্সার উইথড্রয়াল প্রসেসিং ফি (%)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={10}
+                        step={0.5}
+                        value={freelancerWithdrawalFeePercent}
+                        onChange={(e) => setFreelancerWithdrawalFeePercent(Number(e.target.value) || 0)}
+                        className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs font-bold text-white focus:outline-none focus:border-[#1DB954]"
+                      />
+                      <span className="text-xs font-bold text-slate-400 shrink-0">% চার্জ</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">বিকাশ/নগদ/ব্যাংক উইথড্রয়াল রিকোয়েস্টে এই % ফি স্বয়ংক্রিয়ভাবে কাটা হবে।</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Academy Course & Trainer Revenue Share */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-5 shadow-xl">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-[#1DB954]" />
+                    <span>একাডেমি কোর্স ও ট্রেইনার রেভিনিউ শেয়ার</span>
+                  </h3>
+                  <span className="px-2.5 py-1 bg-emerald-500/20 text-[#1DB954] text-xs font-black rounded-lg border border-emerald-500/30">
+                    ৯০:১০ রেশিও
+                  </span>
+                </div>
+
+                {/* Trainer Share Slider & Input */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-xs font-bold text-slate-300">
+                    <label>ইনস্ট্রাক্টর / ট্রেইনার শেয়ার (%)</label>
+                    <span className="text-lg font-black text-emerald-400">{trainerRevShareRate}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={50}
+                    max={100}
+                    step={1}
+                    value={trainerRevShareRate}
+                    onChange={(e) => setTrainerRevShareRate(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>৫০% (সমান শেয়ার)</span>
+                    <span>৭৫%</span>
+                    <span>১০০% (ফুল ট্রেইনার পে)</span>
+                  </div>
+                </div>
+
+                {/* Ratio Cards */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="bg-slate-950 p-3.5 rounded-2xl border border-emerald-500/20">
+                    <p className="text-[11px] text-slate-400 font-bold">ট্রেইনার এনরোলমেন্ট আয়</p>
+                    <p className="text-xl font-black text-emerald-400 mt-1">{trainerRevShareRate}%</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">কোর্স বিক্রির টাকা থেকে প্রাপ্য</p>
+                  </div>
+                  <div className="bg-slate-950 p-3.5 rounded-2xl border border-sky-500/20">
+                    <p className="text-[11px] text-slate-400 font-bold">একাডেমি প্ল্যাটফর্ম মার্জিন</p>
+                    <p className="text-xl font-black text-sky-400 mt-1">{100 - trainerRevShareRate}%</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">একাডেমি প্ল্যাটফর্ম রক্ষণাবেক্ষণ</p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    <span>স্বয়ংক্রিয় এস্ক্রো ও কমিশন সুরক্ষা</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    এই রেট পরিবর্তন করলে ভবিষ্যতের সকল নতুন কোর্স ভর্তি এবং সার্ভিস অর্ডার স্বয়ংক্রিয়ভাবে নতুন পার্সেন্টেজ অনুযায়ী ক্যালকুলেট ও এস্ক্রোতে জমা হবে।
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+            {/* LIVE INTERACTIVE REVENUE SIMULATOR */}
+            <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/30 border border-slate-800 p-6 rounded-3xl space-y-5 shadow-xl">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-4">
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-400" />
+                    <span>লাইভ রেভিনিউ & কমিশন সিমুলেটর (Live Interactive Simulator)</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    যেকোনো প্রজেক্ট ভ্যালু লিখে রিয়েল-টাইমে প্ল্যাটফর্ম কমিশন ও সেলার আর্নিং পরীক্ষা করুন
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 font-bold">সিমুলেশন এমাউন্ট:</span>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">৳</span>
+                    <input
+                      type="number"
+                      step={500}
+                      min={100}
+                      value={feeSimulatorAmount}
+                      onChange={(e) => setFeeSimulatorAmount(Number(e.target.value) || 0)}
+                      className="w-32 pl-7 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-black text-white focus:outline-none focus:border-[#1DB954]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Simulation Result Cards */}
+              {(() => {
+                const sampleAmount = feeSimulatorAmount || 0;
+                const clientFee = Math.round(sampleAmount * (clientProcessingFeePercent / 100));
+                const totalClientPaid = sampleAmount + clientFee;
+                const adminCommission = Math.round(sampleAmount * (mktCommissionRate / 100));
+                const sellerGross = Math.round(sampleAmount * ((100 - mktCommissionRate) / 100));
+                const withdrawalFee = Math.round(sellerGross * (freelancerWithdrawalFeePercent / 100));
+                const sellerNet = sellerGross - withdrawalFee;
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-2xl space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold">১. বায়ার / ক্লায়েন্ট মোট দেবে</span>
+                      <p className="text-xl font-black text-white">৳{totalClientPaid.toLocaleString('bn-BD')}</p>
+                      <p className="text-[10px] text-slate-500">মূল: ৳{sampleAmount.toLocaleString('bn-BD')} + ফি: ৳{clientFee}</p>
+                    </div>
+
+                    <div className="bg-slate-950/80 border border-emerald-500/30 p-4 rounded-2xl space-y-1">
+                      <span className="text-[10px] text-emerald-400 font-bold">২. এডমিন প্ল্যাটফর্ম আয় ({mktCommissionRate}%)</span>
+                      <p className="text-xl font-black text-[#1DB954]">৳{adminCommission.toLocaleString('bn-BD')}</p>
+                      <p className="text-[10px] text-emerald-400/80">নেট প্রফিট মার্জিন</p>
+                    </div>
+
+                    <div className="bg-slate-950/80 border border-amber-500/30 p-4 rounded-2xl space-y-1">
+                      <span className="text-[10px] text-amber-400 font-bold">৩. সেলার এস্ক্রো পেআউট ({100 - mktCommissionRate}%)</span>
+                      <p className="text-xl font-black text-amber-400">৳{sellerGross.toLocaleString('bn-BD')}</p>
+                      <p className="text-[10px] text-amber-400/80">সেলার আর্নিং ব্যালেন্স</p>
+                    </div>
+
+                    <div className="bg-slate-950/80 border border-sky-500/30 p-4 rounded-2xl space-y-1">
+                      <span className="text-[10px] text-sky-400 font-bold">৪. সেলার নিট উইথড্রয়াল</span>
+                      <p className="text-xl font-black text-sky-400">৳{sellerNet.toLocaleString('bn-BD')}</p>
+                      <p className="text-[10px] text-sky-400/80">উইথড্র ফি বাদ দেওয়ার পর</p>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Bottom Save Action */}
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setMktCommissionRate(10);
+                  setTrainerRevShareRate(90);
+                  setClientProcessingFeePercent(0);
+                  setFreelancerWithdrawalFeePercent(1.5);
+                  setFeeSaveSuccess(true);
+                  setTimeout(() => setFeeSaveSuccess(false), 3000);
+                }}
+                className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-2xl cursor-pointer transition-all"
+              >
+                ডিফল্ট ১০% রিস্টোর করুন
+              </button>
+              <button
+                onClick={() => {
+                  setFeeSaveSuccess(true);
+                  setTimeout(() => setFeeSaveSuccess(false), 3000);
+                  alert(`ফি ও কমিশন সেটিংস সফলভাবে সেভ হয়েছে!\n• মার্কেটপ্লেস কমিশন: ${mktCommissionRate}%\n• ট্রেইনার শেয়ার: ${trainerRevShareRate}%\n• ক্লায়েন্ট ফি: ${clientProcessingFeePercent}%\n• উইথড্রয়াল চার্জ: ${freelancerWithdrawalFeePercent}%`);
+                }}
+                className="px-7 py-3 bg-[#1DB954] hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-2xl flex items-center gap-2 cursor-pointer shadow-xl transition-all"
+              >
+                <Save className="w-4 h-4" />
+                <span>ফি & কমিশন কনফিগারেশন সেভ করুন</span>
+              </button>
+            </div>
+
           </div>
         )}
 
