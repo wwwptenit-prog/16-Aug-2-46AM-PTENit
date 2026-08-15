@@ -525,6 +525,10 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
 
   // Sound Synth for Toolkit Actions
   const playToolkitSound = (type: 'click' | 'success' | 'generate' | 'mute' | 'unmute' = 'click', forced: boolean = false) => {
+    try {
+      const saved = localStorage.getItem('ptenit_toolkit_sound');
+      if (saved !== null && saved === 'false' && !forced) return;
+    } catch {}
     if (!isToolkitSoundOn && !forced) return;
     try {
       if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
@@ -1128,6 +1132,16 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
   const [offerCountdown, setOfferCountdown] = useState(15);
   const [totalOfferDuration, setTotalOfferDuration] = useState(15);
   
+  // Sound toggle for live offers & order notification sound (Permanent Saved State)
+  const [isOfferSoundEnabled, setIsOfferSoundEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('ptenit_offer_sound_enabled');
+      return saved !== null ? JSON.parse(saved) === true : true;
+    } catch {
+      return true;
+    }
+  });
+
   // Modals for Offer details and See all
   const [selectedOfferForModal, setSelectedOfferForModal] = useState<LiveOfferItem | null>(null);
   const [isSeeAllOffersModalOpen, setIsSeeAllOffersModalOpen] = useState(false);
@@ -1147,8 +1161,33 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
     }
   }, []);
 
-  // Web Audio Notification Sound Chime (Plays on new offer, immediately stoppable on action)
+  // Toggle Offer Sound Function (Persists permanently in localStorage)
+  const toggleOfferSound = useCallback(() => {
+    setIsOfferSoundEnabled(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('ptenit_offer_sound_enabled', JSON.stringify(next));
+      } catch {}
+      if (!next) {
+        stopOfferNotificationSound();
+      }
+      return next;
+    });
+  }, [stopOfferNotificationSound]);
+
+  // Web Audio Notification Sound Chime (Plays on new offer, NEVER plays if muted in state or localStorage)
   const playOfferNotificationSound = useCallback(() => {
+    // 1. Strict localStorage check
+    try {
+      const saved = localStorage.getItem('ptenit_offer_sound_enabled');
+      if (saved !== null && JSON.parse(saved) === false) {
+        return;
+      }
+    } catch {}
+
+    // 2. React state check
+    if (!isOfferSoundEnabled) return;
+
     try {
       // Close previous audio if running
       if (activeAudioContextRef.current && activeAudioContextRef.current.state !== 'closed') {
@@ -1201,7 +1240,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
     } catch {
       // Audio autoplay policy fallback
     }
-  }, []);
+  }, [isOfferSoundEnabled]);
 
   // When active offer changes, reset countdown based on that offer's dynamic duration and play sound
   useEffect(() => {
@@ -3141,6 +3180,30 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                                       </span>
                                     </div>
 
+                                    {/* Dedicated Sound Toggle 1-Icon Button */}
+                                    <button
+                                      type="button"
+                                      onClick={toggleOfferSound}
+                                      className={`relative p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center shadow-xs active:scale-90 group ${
+                                        isOfferSoundEnabled
+                                          ? 'bg-emerald-500/20 text-[#1DB954] border-[#1DB954]/50 hover:bg-emerald-500/30'
+                                          : 'bg-rose-500/20 text-rose-400 border-rose-500/50 hover:bg-rose-500/30'
+                                      }`}
+                                      title={isOfferSoundEnabled ? "অফার সাউন্ড চালু আছে (ক্লিক করলে বন্ধ হবে)" : "অফার সাউন্ড বন্ধ আছে (ক্লিক করলে চালু হবে)"}
+                                    >
+                                      {isOfferSoundEnabled ? (
+                                        <>
+                                          <Volume2 className="w-4 h-4 text-[#1DB954] group-hover:scale-110 transition-transform" />
+                                          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1DB954] ring-2 ring-slate-900 animate-pulse" />
+                                        </>
+                                      ) : (
+                                        <>
+                                          <VolumeX className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
+                                          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-slate-900" />
+                                        </>
+                                      )}
+                                    </button>
+
                                     {/* 'See All' button if multiple offers exist */}
                                     {activeOffersList.length > 1 && (
                                       <button
@@ -3334,30 +3397,33 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                             </button>
                           </div>
 
-                          {/* Sound Effect Toggle Button in Profile White Area */}
+                          {/* Premium Sound Effect Toggle 1-Icon Button */}
                           <button
                             type="button"
                             onClick={() => {
                               const nextState = !isToolkitSoundOn;
                               setIsToolkitSoundOn(nextState);
+                              try {
+                                localStorage.setItem('ptenit_toolkit_sound', String(nextState));
+                              } catch {}
                               playToolkitSound(nextState ? 'unmute' : 'mute', true);
                             }}
-                            className={`p-2.5 rounded-2xl transition flex items-center gap-1.5 border cursor-pointer active:scale-95 shadow-xs text-xs font-bold ${
+                            className={`relative p-2.5 rounded-2xl transition flex items-center justify-center border cursor-pointer active:scale-90 shadow-xs group ${
                               isToolkitSoundOn
-                                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-[#1DB954] border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:text-slate-900'
+                                ? 'bg-emerald-500/10 dark:bg-emerald-950/40 text-[#1DB954] border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                                : 'bg-rose-500/10 dark:bg-rose-950/40 text-rose-500 border-rose-300 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/50'
                             }`}
-                            title={isToolkitSoundOn ? "সাউন্ড অন (মিউট করতে ক্লিক করুন)" : "সাউন্ড মিউট (অন করতে ক্লিক করুন)"}
+                            title={isToolkitSoundOn ? "সাউন্ড অন আছে (মিউট করতে ক্লিক করুন)" : "সাউন্ড বন্ধ আছে (চালু করতে ক্লিক করুন)"}
                           >
                             {isToolkitSoundOn ? (
                               <>
-                                <Volume2 className="w-4 h-4 text-[#1DB954] animate-pulse" />
-                                <span className="hidden xl:inline text-[11px] font-black">সাউন্ড অন 🔊</span>
+                                <Volume2 className="w-4 h-4 text-[#1DB954] group-hover:scale-110 transition-transform" />
+                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1DB954] ring-2 ring-white dark:ring-slate-900 animate-pulse" />
                               </>
                             ) : (
                               <>
-                                <VolumeX className="w-4 h-4 text-slate-400" />
-                                <span className="hidden xl:inline text-[11px] font-bold text-slate-400">মিউট 🔇</span>
+                                <VolumeX className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" />
+                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
                               </>
                             )}
                           </button>
@@ -3981,7 +4047,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
 
             {/* RIGHT MAIN CONTENT AREA */}
             <div className="lg:col-span-2 xl:col-span-3 space-y-6">
-              
+
               {/* SPECIALIST DYNAMIC SUB-TABS STRIP */}
               <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-xl space-y-3 font-bengali text-white animate-fadeIn">
                 {/* Header Info Strip */}
@@ -4272,24 +4338,27 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                         onClick={() => {
                           const nextState = !isToolkitSoundOn;
                           setIsToolkitSoundOn(nextState);
+                          try {
+                            localStorage.setItem('ptenit_toolkit_sound', String(nextState));
+                          } catch {}
                           playToolkitSound(nextState ? 'unmute' : 'mute', true);
                         }}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer active:scale-95 shadow-xs ${
+                        className={`relative p-2 sm:px-3 sm:py-2 rounded-xl transition flex items-center justify-center border cursor-pointer active:scale-90 shadow-xs group ${
                           isToolkitSoundOn
-                            ? 'bg-emerald-500/15 text-[#1DB954] border-emerald-500/30 hover:bg-emerald-500/25 font-black'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:text-slate-900 dark:hover:text-slate-200'
+                            ? 'bg-emerald-500/10 dark:bg-emerald-950/40 text-[#1DB954] border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                            : 'bg-rose-500/10 dark:bg-rose-950/40 text-rose-500 border-rose-300 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/50'
                         }`}
-                        title={isToolkitSoundOn ? "সাউন্ড অন (মিউট করতে ক্লিক করুন)" : "সাউন্ড মিউট (অন করতে ক্লিক করুন)"}
+                        title={isToolkitSoundOn ? "সাউন্ড অন আছে (মিউট করতে ক্লিক করুন)" : "সাউন্ড বন্ধ আছে (চালু করতে ক্লিক করুন)"}
                       >
                         {isToolkitSoundOn ? (
                           <>
-                            <Volume2 className="w-4 h-4 text-[#1DB954] animate-pulse" />
-                            <span>সাউন্ড: অন 🔊</span>
+                            <Volume2 className="w-4 h-4 text-[#1DB954] group-hover:scale-110 transition-transform" />
+                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1DB954] ring-2 ring-white dark:ring-slate-900 animate-pulse" />
                           </>
                         ) : (
                           <>
-                            <VolumeX className="w-4 h-4 text-slate-400" />
-                            <span>সাউন্ড: মিউট 🔇</span>
+                            <VolumeX className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" />
+                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
                           </>
                         )}
                       </button>
@@ -4492,188 +4561,7 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                     </div>
                   )}
 
-                  {/* SUBTAB 1: Active Uploaded Orders */}
-                  {specialistMainTab === 'marketplace' && sellerSubTab === 'gigs' && (
-                    <div className="space-y-4">
-                      {sellerGigs.length === 0 ? (
-                        <div className="p-8 sm:p-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-center space-y-4 font-bengali">
-                          <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-[#1DB954] flex items-center justify-center mx-auto">
-                            <UploadCloud className="w-8 h-8" />
-                          </div>
-                          <div className="space-y-1">
-                            <h3 className="text-base font-black text-slate-900 dark:text-white">
-                              আপনার এখন পর্যন্ত কোনো আপলোডকৃত গিগ/অর্ডার নেই
-                            </h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                              আপনার সার্ভিস, স্কিল বা প্রোডাক্ট নিয়ে ৩টি প্যাকেজ সহ নতুন গিগ তৈরি করুন এবং ক্লায়েন্টদের থেকে সরাসরি কাজ পান।
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => setSellerSubTab('create_gig')}
-                            className="px-5 py-2.5 bg-[#1DB954] hover:bg-[#19a34a] text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg transition cursor-pointer inline-flex items-center gap-2"
-                          >
-                            <PlusCircle className="w-4 h-4" />
-                            <span>প্রথম গিগ পোস্ট করুন</span>
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                          {sellerGigs.map(g => (
-                            <div key={g.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden hover:border-[#1DB954] transition-all duration-200 shadow-sm flex flex-col group">
-                              {/* Card Image Header */}
-                              <div className="relative h-40 overflow-hidden bg-slate-800">
-                                <img src={g.thumbnail} alt={g.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                                <div className="absolute top-2.5 left-2.5 bg-slate-950/80 backdrop-blur-md text-[#1DB954] text-[10px] font-black px-2.5 py-1 rounded-full border border-[#1DB954]/30 shadow-sm">
-                                  {g.category}
-                                </div>
-                                 {/* 3-Dot Options Menu */}
-                                 <div className="absolute top-2.5 right-2.5 z-20">
-                                   <button
-                                     onClick={(e) => {
-                                       e.stopPropagation();
-                                       setActiveGigMenuId(activeGigMenuId === g.id ? null : g.id);
-                                     }}
-                                     className="p-1.5 rounded-full bg-slate-950/80 backdrop-blur-md text-white hover:bg-[#1DB954] hover:text-slate-950 transition cursor-pointer border border-white/20 shadow-md flex items-center justify-center"
-                                     title="গিগ অপশন (3 Dots)"
-                                   >
-                                     <MoreVertical className="w-4 h-4" />
-                                   </button>
-
-                                   {activeGigMenuId === g.id && (
-                                     <>
-                                       <div
-                                         className="fixed inset-0 z-30 cursor-default"
-                                         onClick={(e) => {
-                                           e.stopPropagation();
-                                           setActiveGigMenuId(null);
-                                         }}
-                                       />
-
-                                       <div
-                                         className="absolute right-0 top-full mt-1.5 w-[160px] bg-white dark:bg-slate-900 border border-rose-500 rounded-xl shadow-xl z-40 p-2 space-y-1.5 animate-fadeIn font-bengali text-center"
-                                         onClick={(e) => e.stopPropagation()}
-                                       >
-                                         <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
-                                           <span className="text-[10px] font-bold text-rose-500 flex items-center gap-0.5">
-                                             <Trash2 className="w-3 h-3" />
-                                             ডিলেট করুন?
-                                           </span>
-                                           <button
-                                             onClick={() => setActiveGigMenuId(null)}
-                                             className="p-0.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition cursor-pointer"
-                                             title="বন্ধ করুন"
-                                           >
-                                             <X className="w-3 h-3" />
-                                           </button>
-                                         </div>
-
-                                         <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 py-0.5 leading-tight">
-                                           আপনি কি সত্যিই ডিলেট করবেন?
-                                         </p>
-
-                                         <div className="flex items-center justify-center gap-1.5 pt-0.5">
-                                           <button
-                                             onClick={() => {
-                                               handleDeleteGig(g.id, g.title);
-                                               setActiveGigMenuId(null);
-                                             }}
-                                             className="flex-1 py-1 px-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-[11px] font-bold transition cursor-pointer shadow-sm text-center"
-                                           >
-                                             হ্যাঁ
-                                           </button>
-                                           <button
-                                             onClick={() => setActiveGigMenuId(null)}
-                                             className="flex-1 py-1 px-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md text-[11px] font-bold transition cursor-pointer text-center"
-                                           >
-                                             না
-                                           </button>
-                                         </div>
-                                       </div>
-                                     </>
-                                   )}
-                                 </div>
-                              </div>
-
-                              {/* Card Details Body */}
-                              <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                                <div>
-                                  <h4 className="text-xs font-black text-slate-900 dark:text-white line-clamp-2 leading-relaxed">
-                                    {g.title}
-                                  </h4>
-                                  <div className="mt-2 flex items-center justify-between">
-                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">শুরু ৳</span>
-                                    <span className="text-sm font-black text-[#1DB954]">
-                                      ৳{(g.packages?.basic?.price ?? g.price ?? 2500).toLocaleString('bn-BD')}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Performance Stats Box */}
-                                <div className="p-2.5 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60 grid grid-cols-2 gap-2 text-[10px]">
-                                  <div>
-                                    <span className="text-slate-400 block text-[9px]">👁️ ভিউ</span>
-                                    <span className="font-extrabold text-slate-900 dark:text-white">
-                                      {((g.salesCount || 1) * 120 + 85).toLocaleString('bn-BD')}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-400 block text-[9px]">📈 ইমপ্রেশন</span>
-                                    <span className="font-extrabold text-slate-900 dark:text-white">
-                                      {((g.salesCount || 1) * 450 + 320).toLocaleString('bn-BD')}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-400 block text-[9px]">📦 মোট অর্ডার</span>
-                                    <span className="font-extrabold text-emerald-600 dark:text-[#1DB954]">
-                                      {(g.salesCount || 12).toLocaleString('bn-BD')}টি
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-400 block text-[9px]">💰 অর্জিত আয়</span>
-                                    <span className="font-extrabold text-emerald-600 dark:text-[#1DB954]">
-                                      ৳{((g.price || g.packages?.basic?.price || 2500) * (g.salesCount || 12)).toLocaleString('bn-BD')}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5">
-                                  <button
-                                    onClick={() => handleOpenEditGig(g)}
-                                    className="flex-1 py-1.5 px-2 bg-emerald-500/10 hover:bg-[#1DB954] text-emerald-700 dark:text-[#1DB954] hover:text-slate-950 font-bold text-[11px] rounded-lg transition border border-[#1DB954]/30 flex items-center justify-center gap-1 cursor-pointer"
-                                    title="গিগ এডিট করুন"
-                                  >
-                                    <Edit className="w-3.5 h-3.5" />
-                                    <span>এডিট</span>
-                                  </button>
-
-                                  <button
-                                    onClick={() => setPerformanceGig(g)}
-                                    className="flex-1 py-1.5 px-2 bg-blue-500/10 hover:bg-blue-600 text-blue-700 dark:text-blue-400 hover:text-white font-bold text-[11px] rounded-lg transition border border-blue-500/30 flex items-center justify-center gap-1 cursor-pointer"
-                                    title="পারফরমেন্স অ্যানালিটিক্স দেখুন"
-                                  >
-                                    <BarChart2 className="w-3.5 h-3.5" />
-                                    <span>পারফরমেন্স</span>
-                                  </button>
-
-                                  <button
-                                    onClick={() => setSelectedGig(g)}
-                                    className="flex-1 py-1.5 px-2 bg-amber-500/10 hover:bg-amber-500 text-amber-700 dark:text-amber-400 hover:text-slate-950 font-bold text-[11px] rounded-lg transition border border-amber-500/30 flex items-center justify-center gap-1 cursor-pointer"
-                                    title="বায়ার মোডে প্রিভিউ দেখুন"
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    <span>প্রিভিউ</span>
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* SUBTAB 2: Active Client Orders Workspace */}
+                  {/* SUBTAB: Active Client Orders & Admin Offers Workspace */}
                   {specialistMainTab === 'marketplace' && sellerSubTab === 'orders' && (
                     <div id="seller-orders-section" className="space-y-6 animate-fadeIn font-bengali">
                       {/* Filter Header & Stats */}
@@ -4685,6 +4573,30 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                                 <Package className="w-5 h-5 text-[#1DB954]" />
                                 <span>ক্লায়েন্ট অর্ডারস ও অ্যাডমিন অফারস</span>
                               </h3>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={toggleOfferSound}
+                                className={`relative p-2 sm:px-2.5 sm:py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs active:scale-90 group ${
+                                  isOfferSoundEnabled
+                                    ? 'bg-emerald-500/10 text-[#1DB954] border-emerald-500/30 hover:bg-emerald-500/20'
+                                    : 'bg-rose-500/10 text-rose-500 border-rose-500/30 hover:bg-rose-500/20'
+                                }`}
+                                title={isOfferSoundEnabled ? "অফার সাউন্ড চালু আছে (ক্লিক করলে বন্ধ হবে)" : "অফার সাউন্ড বন্ধ আছে (ক্লিক করলে চালু হবে)"}
+                              >
+                                {isOfferSoundEnabled ? (
+                                  <>
+                                    <Volume2 className="w-4 h-4 text-[#1DB954] group-hover:scale-110 transition-transform" />
+                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1DB954] ring-2 ring-white dark:ring-slate-900 animate-pulse" />
+                                  </>
+                                ) : (
+                                  <>
+                                    <VolumeX className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" />
+                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
+                                  </>
+                                )}
+                              </button>
                             </div>
                           </div>
 
@@ -5028,7 +4940,6 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                                             onClick={() => {
                                               stopOfferNotificationSound();
                                               updateMarketplaceOrderStatus(ord.id, 'pending', 'অর্ডার রিসিভ করা হয়েছে এবং নতুন পেন্ডিং লিস্টে যুক্ত করা হয়েছে।');
-                                              setSellerOrderFilter('pending');
                                             }}
                                             className="px-3.5 py-1.5 bg-gradient-to-r from-[#1DB954] to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-black text-xs sm:text-sm rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
                                           >
@@ -5042,7 +4953,6 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                                             onClick={() => {
                                               stopOfferNotificationSound();
                                               updateMarketplaceOrderStatus(ord.id, 'in_progress', 'কাজ শুরু করা হয়েছে।');
-                                              setSellerOrderFilter('in_progress');
                                             }}
                                             className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs sm:text-sm rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
                                           >
@@ -5125,6 +5035,187 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                           );
                         })()}
                       </div>
+                    </div>
+                  )}
+
+                  {/* SUBTAB 1: Active Uploaded Orders */}
+                  {specialistMainTab === 'marketplace' && sellerSubTab === 'gigs' && (
+                    <div className="space-y-4">
+                      {sellerGigs.length === 0 ? (
+                        <div className="p-8 sm:p-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-center space-y-4 font-bengali">
+                          <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-[#1DB954] flex items-center justify-center mx-auto">
+                            <UploadCloud className="w-8 h-8" />
+                          </div>
+                          <div className="space-y-1">
+                            <h3 className="text-base font-black text-slate-900 dark:text-white">
+                              আপনার এখন পর্যন্ত কোনো আপলোডকৃত গিগ/অর্ডার নেই
+                            </h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                              আপনার সার্ভিস, স্কিল বা প্রোডাক্ট নিয়ে ৩টি প্যাকেজ সহ নতুন গিগ তৈরি করুন এবং ক্লায়েন্টদের থেকে সরাসরি কাজ পান।
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setSellerSubTab('create_gig')}
+                            className="px-5 py-2.5 bg-[#1DB954] hover:bg-[#19a34a] text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg transition cursor-pointer inline-flex items-center gap-2"
+                          >
+                            <PlusCircle className="w-4 h-4" />
+                            <span>প্রথম গিগ পোস্ট করুন</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                          {sellerGigs.map(g => (
+                            <div key={g.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden hover:border-[#1DB954] transition-all duration-200 shadow-sm flex flex-col group">
+                              {/* Card Image Header */}
+                              <div className="relative h-40 overflow-hidden bg-slate-800">
+                                <img src={g.thumbnail} alt={g.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                <div className="absolute top-2.5 left-2.5 bg-slate-950/80 backdrop-blur-md text-[#1DB954] text-[10px] font-black px-2.5 py-1 rounded-full border border-[#1DB954]/30 shadow-sm">
+                                  {g.category}
+                                </div>
+                                 {/* 3-Dot Options Menu */}
+                                 <div className="absolute top-2.5 right-2.5 z-20">
+                                   <button
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       setActiveGigMenuId(activeGigMenuId === g.id ? null : g.id);
+                                     }}
+                                     className="p-1.5 rounded-full bg-slate-950/80 backdrop-blur-md text-white hover:bg-[#1DB954] hover:text-slate-950 transition cursor-pointer border border-white/20 shadow-md flex items-center justify-center"
+                                     title="গিগ অপশন (3 Dots)"
+                                   >
+                                     <MoreVertical className="w-4 h-4" />
+                                   </button>
+
+                                   {activeGigMenuId === g.id && (
+                                     <>
+                                       <div
+                                         className="fixed inset-0 z-30 cursor-default"
+                                         onClick={(e) => {
+                                           e.stopPropagation();
+                                           setActiveGigMenuId(null);
+                                         }}
+                                       />
+
+                                       <div
+                                         className="absolute right-0 top-full mt-1.5 w-[160px] bg-white dark:bg-slate-900 border border-rose-500 rounded-xl shadow-xl z-40 p-2 space-y-1.5 animate-fadeIn font-bengali text-center"
+                                         onClick={(e) => e.stopPropagation()}
+                                       >
+                                         <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+                                           <span className="text-[10px] font-bold text-rose-500 flex items-center gap-0.5">
+                                             <Trash2 className="w-3 h-3" />
+                                             ডিলেট করুন?
+                                           </span>
+                                           <button
+                                             onClick={() => setActiveGigMenuId(null)}
+                                             className="p-0.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition cursor-pointer"
+                                             title="বন্ধ করুন"
+                                           >
+                                             <X className="w-3 h-3" />
+                                           </button>
+                                         </div>
+
+                                         <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 py-0.5 leading-tight">
+                                           আপনি কি সত্যিই ডিলেট করবেন?
+                                         </p>
+
+                                         <div className="flex items-center justify-center gap-1.5 pt-0.5">
+                                           <button
+                                             onClick={() => {
+                                               handleDeleteGig(g.id, g.title);
+                                               setActiveGigMenuId(null);
+                                             }}
+                                             className="flex-1 py-1 px-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-[11px] font-bold transition cursor-pointer shadow-sm text-center"
+                                           >
+                                             হ্যাঁ
+                                           </button>
+                                           <button
+                                             onClick={() => setActiveGigMenuId(null)}
+                                             className="flex-1 py-1 px-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md text-[11px] font-bold transition cursor-pointer text-center"
+                                           >
+                                             না
+                                           </button>
+                                         </div>
+                                       </div>
+                                     </>
+                                   )}
+                                 </div>
+                              </div>
+
+                              {/* Card Details Body */}
+                              <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                                <div>
+                                  <h4 className="text-xs font-black text-slate-900 dark:text-white line-clamp-2 leading-relaxed">
+                                    {g.title}
+                                  </h4>
+                                  <div className="mt-2 flex items-center justify-between">
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">শুরু ৳</span>
+                                    <span className="text-sm font-black text-[#1DB954]">
+                                      ৳{(g.packages?.basic?.price ?? g.price ?? 2500).toLocaleString('bn-BD')}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Performance Stats Box */}
+                                <div className="p-2.5 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-slate-700/60 grid grid-cols-2 gap-2 text-[10px]">
+                                  <div>
+                                    <span className="text-slate-400 block text-[9px]">👁️ ভিউ</span>
+                                    <span className="font-extrabold text-slate-900 dark:text-white">
+                                      {((g.salesCount || 1) * 120 + 85).toLocaleString('bn-BD')}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 block text-[9px]">📈 ইমপ্রেশন</span>
+                                    <span className="font-extrabold text-slate-900 dark:text-white">
+                                      {((g.salesCount || 1) * 450 + 320).toLocaleString('bn-BD')}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 block text-[9px]">📦 মোট অর্ডার</span>
+                                    <span className="font-extrabold text-emerald-600 dark:text-[#1DB954]">
+                                      {(g.salesCount || 12).toLocaleString('bn-BD')}টি
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-slate-400 block text-[9px]">💰 অর্জিত আয়</span>
+                                    <span className="font-extrabold text-emerald-600 dark:text-[#1DB954]">
+                                      ৳{((g.price || g.packages?.basic?.price || 2500) * (g.salesCount || 12)).toLocaleString('bn-BD')}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5">
+                                  <button
+                                    onClick={() => handleOpenEditGig(g)}
+                                    className="flex-1 py-1.5 px-2 bg-emerald-500/10 hover:bg-[#1DB954] text-emerald-700 dark:text-[#1DB954] hover:text-slate-950 font-bold text-[11px] rounded-lg transition border border-[#1DB954]/30 flex items-center justify-center gap-1 cursor-pointer"
+                                    title="গিগ এডিট করুন"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                    <span>এডিট</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => setPerformanceGig(g)}
+                                    className="flex-1 py-1.5 px-2 bg-blue-500/10 hover:bg-blue-600 text-blue-700 dark:text-blue-400 hover:text-white font-bold text-[11px] rounded-lg transition border border-blue-500/30 flex items-center justify-center gap-1 cursor-pointer"
+                                    title="পারফরমেন্স অ্যানালিটিক্স দেখুন"
+                                  >
+                                    <BarChart2 className="w-3.5 h-3.5" />
+                                    <span>পারফরমেন্স</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => setSelectedGig(g)}
+                                    className="flex-1 py-1.5 px-2 bg-amber-500/10 hover:bg-amber-500 text-amber-700 dark:text-amber-400 hover:text-slate-950 font-bold text-[11px] rounded-lg transition border border-amber-500/30 flex items-center justify-center gap-1 cursor-pointer"
+                                    title="বায়ার মোডে প্রিভিউ দেখুন"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    <span>প্রিভিউ</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -6513,25 +6604,28 @@ export const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ setActiv
                             onClick={() => {
                               const nextState = !isToolkitSoundOn;
                               setIsToolkitSoundOn(nextState);
+                              try {
+                                localStorage.setItem('ptenit_toolkit_sound', String(nextState));
+                              } catch {}
                               playToolkitSound(nextState ? 'unmute' : 'mute', true);
                             }}
-                            className={`p-2 rounded-xl transition flex items-center gap-1 border cursor-pointer active:scale-95 shadow-xs text-xs font-bold ${
+                            className={`relative p-2 rounded-xl transition flex items-center justify-center border cursor-pointer active:scale-90 shadow-xs group ${
                               isToolkitSoundOn
-                                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-[#1DB954] border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:text-slate-900'
+                                ? 'bg-emerald-500/10 dark:bg-emerald-950/40 text-[#1DB954] border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                                : 'bg-rose-500/10 dark:bg-rose-950/40 text-rose-500 border-rose-300 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/50'
                             }`}
-                            title={isToolkitSoundOn ? "সাউন্ড অন (মিউট করতে ক্লিক করুন)" : "সাউন্ড মিউট (অন করতে ক্লিক করুন)"}
+                            title={isToolkitSoundOn ? "সাউন্ড অন আছে (মিউট করতে ক্লিক করুন)" : "সাউন্ড বন্ধ আছে (চালু করতে ক্লিক করুন)"}
                           >
                             {isToolkitSoundOn ? (
-                              <div className="flex items-center gap-1">
-                                <Volume2 className="w-4 h-4 text-[#1DB954] animate-pulse" />
-                                <span className="hidden sm:inline text-[10px] font-black text-[#1DB954]">অন 🔊</span>
-                              </div>
+                              <>
+                                <Volume2 className="w-4 h-4 text-[#1DB954] group-hover:scale-110 transition-transform" />
+                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#1DB954] ring-2 ring-white dark:ring-slate-900 animate-pulse" />
+                              </>
                             ) : (
-                              <div className="flex items-center gap-1">
-                                <VolumeX className="w-4 h-4 text-slate-400" />
-                                <span className="hidden sm:inline text-[10px] font-bold text-slate-400">মিউট 🔇</span>
-                              </div>
+                              <>
+                                <VolumeX className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" />
+                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
+                              </>
                             )}
                           </button>
 
