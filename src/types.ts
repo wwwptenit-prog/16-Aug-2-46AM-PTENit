@@ -308,6 +308,11 @@ export interface SiteSettings {
   freelancerTaxDeductionPercent?: number;
   taxRegistrationNumber?: string;
   invoiceTaxNote?: string;
+  // Platform Commission & Fee Defaults
+  defaultCommissionRate?: number;
+  defaultTrainerRevShare?: number;
+  defaultClientFee?: number;
+  defaultWithdrawalFee?: number;
   // Sub-Admins & Support Team Access
   subAdminMembers?: SubAdminMember[];
   // Written Content Configuration

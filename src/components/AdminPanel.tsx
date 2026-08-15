@@ -601,6 +601,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
   const [subAdminPhone, setSubAdminPhone] = useState('');
   const [subAdminRole, setSubAdminRole] = useState<'Sub-Admin' | 'Support Specialist' | 'Order Manager' | 'Course Admin'>('Sub-Admin');
   const [subAdminPermissions, setSubAdminPermissions] = useState<string[]>(['orders_manage', 'support_chat']);
+  const [subAdminSearchFilter, setSubAdminSearchFilter] = useState('');
+  const [subAdminRoleFilter, setSubAdminRoleFilter] = useState<string>('all');
 
   // Testimonial Form State
   const [testimonialModalOpen, setTestimonialModalOpen] = useState(false);
@@ -813,6 +815,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
   useEffect(() => {
     if (siteSettings) {
       setSettingsForm(prev => ({ ...siteSettings, ...prev }));
+      if (siteSettings.defaultCommissionRate !== undefined) {
+        setMktCommissionRate(siteSettings.defaultCommissionRate);
+      }
+      if (siteSettings.defaultTrainerRevShare !== undefined) {
+        setTrainerRevShareRate(siteSettings.defaultTrainerRevShare);
+      }
+      if (siteSettings.defaultClientFee !== undefined) {
+        setClientProcessingFeePercent(siteSettings.defaultClientFee);
+      }
+      if (siteSettings.defaultWithdrawalFee !== undefined) {
+        setFreelancerWithdrawalFeePercent(siteSettings.defaultWithdrawalFee);
+      }
     }
   }, [siteSettings]);
   const [settingsSaved, setSettingsSaved] = useState(false);
@@ -1318,7 +1332,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                   const mainNavs = [
                     {
                       id: 'dashboard',
-                      label: '১. ড্যাশবোর্ড',
+                      label: 'ড্যাশবোর্ড',
                       subText: 'ওভারভিউ & স্ট্যাটস',
                       icon: LayoutDashboard,
                       isActive: activeMainModule === 'dashboard',
@@ -1329,7 +1343,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                     },
                     {
                       id: 'academy',
-                      label: '২. একাডেমি',
+                      label: 'একাডেমি',
                       subText: 'কোর্স, স্টুডেন্ট & টিচার্স',
                       icon: BookOpen,
                       badge: pendingPayouts > 0 ? pendingPayouts : undefined,
@@ -1343,7 +1357,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                     },
                     {
                       id: 'marketplace',
-                      label: '৩. মার্কেটপ্লেস',
+                      label: 'মার্কেটপ্লেস',
                       subText: 'গিগ আপলোড, সার্ভিস & ক্লায়েন্টস',
                       icon: ShoppingBag,
                       badge: gigs.length > 0 ? gigs.length : undefined,
@@ -1357,20 +1371,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                     },
                     {
                       id: 'settings',
-                      label: '৪. সেটিংস',
-                      subText: 'সাইট কনফিগ, ফি & ট্যাক্স',
+                      label: 'সেটিংস',
+                      subText: 'সাইট কনফিগ, সাব-এডমিন & ফি',
                       icon: Settings,
                       isActive: activeMainModule === 'settings',
                       onClick: () => {
                         setActiveMainModule('settings');
-                        if (!['settings', 'payment_methods', 'tax_vat', 'fee_commission'].includes(activeAdminTab) && !activeAdminTab.startsWith('custom_')) {
+                        if (!['settings', 'sub_admins', 'payment_methods', 'fee_commission'].includes(activeAdminTab) && !activeAdminTab.startsWith('custom_')) {
                           setActiveAdminTab('settings');
                         }
                       }
                     },
                     {
                       id: 'system',
-                      label: '৫. সিস্টেম',
+                      label: 'সিস্টেম',
                       subText: 'গ্যালারি, পিক্সেল, কনটেন & লেআউট',
                       icon: Cpu,
                       isActive: activeMainModule === 'system',
@@ -1909,7 +1923,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                 ? 'academy'
                 : ['services', 'marketplace', 'agency_clients', 'gigs_manage', 'office_projects', 'financials'].includes(activeAdminTab)
                 ? 'marketplace'
-                : ['settings', 'payment_methods', 'tax_vat', 'fee_commission'].includes(activeAdminTab)
+                : ['settings', 'sub_admins', 'payment_methods', 'fee_commission'].includes(activeAdminTab)
                 ? 'settings'
                 : ['gallery', 'pixel_setup', 'written_content', 'responsive_setup'].includes(activeAdminTab)
                 ? 'system'
@@ -1947,13 +1961,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
               { id: 'financials', label: 'মার্কেটপ্লেস ফিনান্সিয়ালস', icon: DollarSign }
             ];
           } else if (currentModule === 'settings') {
-            categoryTitle = '⚙️ সাইট সেটিংস & ফিনান্সিয়াল কনফিগ:';
+            categoryTitle = '⚙️ সাইট সেটিংস & টিম কনফিগ:';
             categoryColor = 'text-amber-400';
             subTabs = [
-              { id: 'settings', label: '১. সাইট সেটিংস & সাব-এডমিন', icon: Settings },
-              { id: 'payment_methods', label: '২. পেমেন্ট মেথড', icon: CreditCard },
-              { id: 'tax_vat', label: '৩. সকল ট্যাক্স & ভ্যাট', icon: ShieldCheck },
-              { id: 'fee_commission', label: '৪. প্ল্যাটফর্ম ফি & কমিশন কন্ট্রোলার', icon: Percent },
+              { id: 'settings', label: 'সাইট সেটিংস', icon: Settings },
+              { id: 'sub_admins', label: 'সাব-এডমিন', icon: Users, badge: (settingsForm.subAdminMembers && settingsForm.subAdminMembers.length > 0) ? settingsForm.subAdminMembers.length : undefined },
+              { id: 'payment_methods', label: 'পেমেন্ট মেথড', icon: CreditCard },
+              { id: 'fee_commission', label: 'কমিশন কন্ট্রোলার', icon: Percent },
               ...customAdminPages.filter(cp => cp.category !== 'system').map(cp => ({
                 id: cp.id,
                 label: cp.label,
@@ -1964,10 +1978,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
             categoryTitle = '🖥️ সিস্টেম, কন্টেন্ট & লেআউট:';
             categoryColor = 'text-sky-400';
             subTabs = [
-              { id: 'gallery', label: '১. গ্যালারি', icon: ImageIcon },
-              { id: 'pixel_setup', label: '২. পিক্সেল সেটআপ', icon: Sparkles },
-              { id: 'written_content', label: '৩. সকল লিখিত কনটেন (রাইটিং)', icon: FileText },
-              { id: 'responsive_setup', label: '৪. রেসপন্সিভ ১০০% ফিট (লেআউট)', icon: Monitor },
+              { id: 'gallery', label: 'গ্যালারি', icon: ImageIcon },
+              { id: 'pixel_setup', label: 'পিক্সেল সেটআপ', icon: Sparkles },
+              { id: 'written_content', label: 'সকল লিখিত কনটেন (রাইটিং)', icon: FileText },
+              { id: 'responsive_setup', label: 'রেসপন্সিভ ১০০% ফিট (লেআউট)', icon: Monitor },
               ...customAdminPages.filter(cp => cp.category === 'system').map(cp => ({
                 id: cp.id,
                 label: cp.label,
@@ -5966,27 +5980,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                 />
               </div>
 
-              {/* Payment Methods Quick Link Notice */}
-              <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <h4 className="text-xs font-black text-[#1DB954] flex items-center gap-1.5">
-                    <CreditCard className="w-4 h-4" />
-                    <span>পেমেন্ট মেথড কনফিগারেশন (bKash, Nagad, Rocket & Bank)</span>
-                  </h4>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                    সকল মোবাইল ব্যাংকিং (MFS) ও অফিশিয়াল ব্যাংক একাউন্ট নম্বর পরিচালনা করতে "৪. পেমেন্ট মেথড" ট্যাবে যান।
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveAdminTab('payment_methods')}
-                  className="px-3.5 py-2 bg-[#1DB954] hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 shrink-0 shadow transition cursor-pointer"
-                >
-                  <CreditCard className="w-3.5 h-3.5" />
-                  <span>পেমেন্ট মেথড সেটআপে যান →</span>
-                </button>
-              </div>
-
               {/* Site Logo Upload */}
               <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 space-y-2">
                 <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
@@ -6065,73 +6058,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                 )}
               </div>
 
-              {/* SUB-ADMIN AND SUPPORT TEAM MANAGEMENT SECTION */}
-              <div className="p-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 space-y-4">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                      <Users className="w-4 h-4 text-amber-500" />
-                      <span>সাব-এডমিন এবং সাপোর্ট টিম নিয়োগ & একসেস কন্ট্রোল</span>
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      ওয়েবসাইট পরিচালনা, অর্ডার ম্যানেজমেন্ট এবং ক্লায়েন্ট লাইভ সাপোর্টের জন্য সাব-এডমিন নিয়োগ ও মডিউল পারমিশন সেট করুন।
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSubAdminModalOpen(true)}
-                    className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 shrink-0 shadow transition cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>+ নতুন সাব-এডমিন / সাপোর্ট মেম্বার</span>
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {(!settingsForm.subAdminMembers || settingsForm.subAdminMembers.length === 0) ? (
-                    <div className="text-center py-6 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl">
-                      <p className="text-xs text-slate-400 font-bold">এখনো কোনো সাব-এডমিন বা সাপোর্ট মেম্বার যুক্ত করা হয়নি।</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {settingsForm.subAdminMembers.map(member => (
-                        <div key={member.id} className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex justify-between items-start gap-2 shadow-sm">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-extrabold text-xs text-slate-900 dark:text-white">{member.name}</span>
-                              <span className={`px-2 py-0.5 text-[10px] font-black rounded-md ${
-                                member.role === 'Sub-Admin' ? 'bg-amber-500/20 text-amber-500' :
-                                member.role === 'Support Specialist' ? 'bg-emerald-500/20 text-emerald-500' :
-                                member.role === 'Order Manager' ? 'bg-blue-500/20 text-blue-500' : 'bg-purple-500/20 text-purple-500'
-                              }`}>
-                                {member.role}
-                              </span>
-                            </div>
-                            <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">{member.email} • {member.phone}</p>
-                            <div className="flex flex-wrap gap-1 pt-1">
-                              {member.permissions.map((p, idx) => (
-                                <span key={idx} className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] font-bold rounded">
-                                  {p}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSubAdmin(member.id)}
-                            className="p-1 text-slate-400 hover:text-rose-500 cursor-pointer"
-                            title="রিমুভ করুন"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* Money Back & Escrow Guarantee Settings Control */}
               <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
@@ -6197,6 +6123,273 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
             </form>
           </div>
         </div>
+        )}
+
+        {/* TAB 7.2: DEDICATED SUB-ADMIN MANAGEMENT */}
+        {activeAdminTab === 'sub_admins' && (
+          <div className="space-y-6 font-bengali">
+            {/* Top Header Banner */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                    <Users className="w-6 h-6 text-amber-500" /> সাব-এডমিন এবং সাপোর্ট টিম একসেস কন্ট্রোল
+                  </h2>
+                  <span className="px-3 py-1 bg-amber-500/20 text-amber-400 text-xs font-black rounded-full border border-amber-500/40 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    মোট সদস্য: {settingsForm.subAdminMembers?.length || 0} জন
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300">
+                  প্ল্যাটফর্ম প্রশাসন, কোর্স মডারেশন, অর্ডার ডেলিভারি তদারকি ও লাইভ ক্লায়েন্ট সাপোর্টের জন্য সাব-এডমিন নিয়োগ এবং অ্যাক্টিভ পারমিশন নির্ধারণ করুন।
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSubAdminModalOpen(true)}
+                className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 shrink-0 shadow-lg transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ নতুন সাব-এডমিন / মেম্বার নিয়োগ</span>
+              </button>
+            </div>
+
+            {/* Quick Stat Counter Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <p className="text-xs text-slate-500 font-bold">মোট নিযুক্ত মেম্বার</p>
+                <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                  {settingsForm.subAdminMembers?.length || 0} <span className="text-xs font-normal text-slate-400">জন</span>
+                </p>
+              </div>
+              <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <p className="text-xs text-amber-500 font-bold">সাব-এডমিন (Full Admin)</p>
+                <p className="text-2xl font-black text-amber-500 mt-1">
+                  {(settingsForm.subAdminMembers || []).filter(m => m.role === 'Sub-Admin').length} <span className="text-xs font-normal text-slate-400">জন</span>
+                </p>
+              </div>
+              <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <p className="text-xs text-emerald-500 font-bold">সাপোর্ট স্পেশালিস্ট</p>
+                <p className="text-2xl font-black text-emerald-500 mt-1">
+                  {(settingsForm.subAdminMembers || []).filter(m => m.role === 'Support Specialist').length} <span className="text-xs font-normal text-slate-400">জন</span>
+                </p>
+              </div>
+              <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <p className="text-xs text-blue-500 font-bold">অর্ডার / কোর্স ম্যানেজার</p>
+                <p className="text-2xl font-black text-blue-500 mt-1">
+                  {(settingsForm.subAdminMembers || []).filter(m => m.role === 'Order Manager' || m.role === 'Course Admin').length} <span className="text-xs font-normal text-slate-400">জন</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Filter & Search Controls */}
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="নাম, ইমেইল অথবা ফোন দিয়ে খুঁজুন..."
+                  value={subAdminSearchFilter}
+                  onChange={e => setSubAdminSearchFilter(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-xs text-slate-500 font-bold whitespace-nowrap">পদবী ফিল্টার:</span>
+                <select
+                  value={subAdminRoleFilter}
+                  onChange={e => setSubAdminRoleFilter(e.target.value)}
+                  className="w-full sm:w-auto px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                >
+                  <option value="all">সকল পদবী ({settingsForm.subAdminMembers?.length || 0})</option>
+                  <option value="Sub-Admin">Sub-Admin</option>
+                  <option value="Support Specialist">Support Specialist</option>
+                  <option value="Order Manager">Order Manager</option>
+                  <option value="Course Admin">Course Admin</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Sub-Admin Members List Cards */}
+            <div className="space-y-4">
+              {(() => {
+                const members = (settingsForm.subAdminMembers || []).filter(m => {
+                  const matchesSearch = !subAdminSearchFilter ||
+                    m.name.toLowerCase().includes(subAdminSearchFilter.toLowerCase()) ||
+                    m.email.toLowerCase().includes(subAdminSearchFilter.toLowerCase()) ||
+                    m.phone.includes(subAdminSearchFilter);
+                  const matchesRole = subAdminRoleFilter === 'all' || m.role === subAdminRoleFilter;
+                  return matchesSearch && matchesRole;
+                });
+
+                if (members.length === 0) {
+                  return (
+                    <div className="bg-white dark:bg-slate-800 p-12 text-center rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 space-y-3">
+                      <div className="w-14 h-14 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
+                        <Users className="w-7 h-7" />
+                      </div>
+                      <h4 className="text-base font-extrabold text-slate-900 dark:text-white">কোনো সাব-এডমিন বা সাপোর্ট মেম্বার পাওয়া যায়নি</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                        আপনার এডমিন প্যানেলকে সহযোগিতার জন্য নতুন সাব-এডমিন নিয়োগ করতে উপরের "+ নতুন সাব-এডমিন / মেম্বার নিয়োগ" বাটনে ক্লিক করুন।
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setSubAdminModalOpen(true)}
+                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl inline-flex items-center gap-1.5 shadow transition"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> মেম্বার যুক্ত করুন
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {members.map(member => (
+                      <div
+                        key={member.id}
+                        className="bg-white dark:bg-slate-800 p-5 rounded-3xl border border-slate-200 dark:border-slate-700 hover:border-amber-500/50 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm text-white shadow-inner ${
+                                member.role === 'Sub-Admin' ? 'bg-gradient-to-br from-amber-500 to-amber-700' :
+                                member.role === 'Support Specialist' ? 'bg-gradient-to-br from-emerald-500 to-teal-700' :
+                                member.role === 'Order Manager' ? 'bg-gradient-to-br from-blue-500 to-indigo-700' :
+                                'bg-gradient-to-br from-purple-500 to-violet-700'
+                              }`}>
+                                {member.name.charAt(0)}
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                  {member.name}
+                                </h4>
+                                <span className={`inline-block px-2.5 py-0.5 text-[10px] font-black rounded-lg mt-0.5 ${
+                                  member.role === 'Sub-Admin' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
+                                  member.role === 'Support Specialist' ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30' :
+                                  member.role === 'Order Manager' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' :
+                                  'bg-purple-500/20 text-purple-500 border border-purple-500/30'
+                                }`}>
+                                  {member.role}
+                                </span>
+                              </div>
+                            </div>
+
+                            <span className={`px-2.5 py-1 text-[10px] font-black rounded-full border flex items-center gap-1 ${
+                              member.status === 'active'
+                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${member.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                              {member.status === 'active' ? 'অ্যাক্টিভ' : 'সাসপেন্ডেড'}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 font-mono bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+                            <p className="flex items-center gap-1.5">
+                              <span className="text-slate-400 font-sans font-bold">ইমেইল:</span> {member.email}
+                            </p>
+                            <p className="flex items-center gap-1.5">
+                              <span className="text-slate-400 font-sans font-bold">মোবাইল:</span> {member.phone}
+                            </p>
+                            {member.assignedAt && (
+                              <p className="flex items-center gap-1.5 text-[11px]">
+                                <span className="text-slate-400 font-sans font-bold">নিয়োগ তারিখ:</span> {member.assignedAt}
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5">
+                              অনুমোদিত অ্যাক্সেস পারমিশনসমূহ:
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {member.permissions.map((perm, idx) => {
+                                const permLabels: Record<string, string> = {
+                                  'orders_manage': '📦 অর্ডার প্রসেসিং',
+                                  'support_chat': '💬 লাইভ চ্যাট & সাপোর্ট',
+                                  'courses_manage': '📚 কোর্স মডারেশন',
+                                  'user_verify': '👥 ইউজার ভেরিফিকেশন',
+                                  'billing_verify': '⚡ বিলিং অডিট',
+                                  'gigs_manage': '💼 গিগ & সার্ভিস'
+                                };
+                                return (
+                                  <span
+                                    key={idx}
+                                    className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-300 text-[10px] font-bold rounded-lg border border-slate-200 dark:border-slate-600"
+                                  >
+                                    {permLabels[perm] || perm}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-700/70 flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedList = (settingsForm.subAdminMembers || []).map(m =>
+                                m.id === member.id ? { ...m, status: (m.status === 'active' ? 'suspended' : 'active') as any } : m
+                              );
+                              setSettingsForm({ ...settingsForm, subAdminMembers: updatedList });
+                              updateSiteSettings({ ...settingsForm, subAdminMembers: updatedList });
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                              member.status === 'active'
+                                ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
+                                : 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
+                            }`}
+                          >
+                            {member.status === 'active' ? 'পজ / সাসপেন্ড করুন' : 'পুনরায় সক্রিয় করুন'}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`আপনি কি নিশ্চিত যে ${member.name}-কে সাব-এডমিন তালিকা থেকে মুছে ফেলতে চান?`)) {
+                                handleRemoveSubAdmin(member.id);
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>ডিলিট</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Permission Guide Matrix Card */}
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 text-white">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-amber-500" />
+                <h3 className="text-sm font-black text-white">সাব-এডমিন পদবী ও পারমিশন গাইডলাইন</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 space-y-1">
+                  <p className="font-black text-amber-400">১. Sub-Admin</p>
+                  <p className="text-slate-400 text-[11px]">সম্পূর্ণ একাডেমি ও মার্কেটপ্লেসের সকল অর্ডার, গিগ, ক্লায়েন্ট ও ভেরিফিকেশন অ্যাক্সেস।</p>
+                </div>
+                <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 space-y-1">
+                  <p className="font-black text-emerald-400">২. Support Specialist</p>
+                  <p className="text-slate-400 text-[11px]">শুধুমাত্র সরাসরি লাইভ মেসেঞ্জার চ্যাট, গ্রাহক সাপোর্ট ও টিকেট সমাধান করার সুবিধা।</p>
+                </div>
+                <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 space-y-1">
+                  <p className="font-black text-blue-400">৩. Order Manager</p>
+                  <p className="text-slate-400 text-[11px]">মার্কেটপ্লেস এস্ক্রো অর্ডার ডেলিভারি যাচাই, অ্যাপ্রুভাল ও কোর্স রেজিস্ট্রেশন ম্যানেজমেন্ট।</p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* TAB: ALL WRITTEN CONTENT EDITOR */}
@@ -6724,132 +6917,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
           </div>
         )}
 
-        {/* TAB 5: ALL TAXES & VAT CONFIG */}
-        {activeAdminTab === 'tax_vat' && (
-          <div className="space-y-6 font-bengali">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl max-w-3xl">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                    <ShieldCheck className="w-6 h-6 text-amber-400" /> সকল ট্যাক্স & ভ্যাট (Taxes & VAT Config)
-                  </h2>
-                  <span className="px-3 py-1 bg-amber-500/20 text-amber-400 text-xs font-black rounded-full border border-amber-500/40 flex items-center gap-1.5 animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                    সরকারী ইনভয়েস কনফিগ
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300">
-                  প্ল্যাটফর্ম ফি, কোর্স ভ্যাট, সার্ভিস ট্যাক্স এবং ফ্রিল্যান্সার ইনকাম ট্যাক্স পার্সেন্টেজ কনফিগার করুন।
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-slate-700 max-w-3xl space-y-6">
-              {settingsSaved && (
-                <div className="p-3 bg-emerald-500/20 border border-emerald-500/50 text-emerald-500 font-bold rounded-xl text-xs flex items-center gap-2">
-                  <Check className="w-4 h-4" /> ট্যাক্স ও ভ্যাট তথ্য সেভ হয়েছে!
-                </div>
-              )}
-
-              <form onSubmit={handleSaveSettings} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-slate-800 dark:text-slate-200">
-                      প্ল্যাটফর্ম সার্ভিস ট্যাক্স (%)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={settingsForm.platformTaxPercent ?? 5}
-                      onChange={e => setSettingsForm({ ...settingsForm, platformTaxPercent: parseFloat(e.target.value) || 0 })}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#1DB954]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-slate-800 dark:text-slate-200">
-                      কোর্স এনরোলমেন্ট ভ্যাট (%)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={settingsForm.courseVatPercent ?? 15}
-                      onChange={e => setSettingsForm({ ...settingsForm, courseVatPercent: parseFloat(e.target.value) || 0 })}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#1DB954]"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-slate-800 dark:text-slate-200">
-                      মার্কেটপ্লেস ক্লায়েন্ট ইনভয়েস ট্যাক্স (%)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={settingsForm.serviceTaxPercent ?? 10}
-                      onChange={e => setSettingsForm({ ...settingsForm, serviceTaxPercent: parseFloat(e.target.value) || 0 })}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#1DB954]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-slate-800 dark:text-slate-200">
-                      ফ্রিল্যান্সার পে-আউট উৎস কর/ইনকাম ট্যাক্স (%)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={settingsForm.freelancerTaxDeductionPercent ?? 5}
-                      onChange={e => setSettingsForm({ ...settingsForm, freelancerTaxDeductionPercent: parseFloat(e.target.value) || 0 })}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#1DB954]"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold mb-1 text-slate-800 dark:text-slate-200">
-                    কোম্পানি বিজনেস আইডি / BIN / TIN নম্বর
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="উদা: BIN-1928374651029"
-                    value={settingsForm.taxRegistrationNumber || ''}
-                    onChange={e => setSettingsForm({ ...settingsForm, taxRegistrationNumber: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#1DB954]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold mb-1 text-slate-800 dark:text-slate-200">
-                    ইনভয়েস ট্যাক্স ডিসক্লেমার নোট (Invoice Footer Note)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="উদা: সকল মূল্যের সাথে সরকারি ভ্যাট ও ট্যাক্স অন্তর্ভুক্ত।"
-                    value={settingsForm.invoiceTaxNote || ''}
-                    onChange={e => setSettingsForm({ ...settingsForm, invoiceTaxNote: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-[#1DB954]"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 cursor-pointer shadow-lg transition-all"
-                >
-                  <Save className="w-4 h-4" /> ট্যাক্স ও ভ্যাট কনফিগ সেভ করুন
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 7.8: PLATFORM FEE & COMMISSION RATE CONTROLLER */}
+        {/* TAB: PLATFORM FEE & COMMISSION RATE CONTROLLER */}
         {activeAdminTab === 'fee_commission' && (
           <div className="space-y-6 font-bengali">
             {/* Top Header Banner */}
@@ -6857,7 +6925,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                    <Percent className="w-6 h-6 text-[#1DB954]" /> প্ল্যাটফর্ম ফি & কমিশন রেট কন্ট্রোলার
+                    <Percent className="w-6 h-6 text-[#1DB954]" /> কমিশন কন্ট্রোলার
                   </h2>
                   <span className="px-3 py-1 bg-emerald-500/20 text-[#1DB954] text-xs font-black rounded-full border border-emerald-500/40 flex items-center gap-1.5 animate-pulse">
                     <Zap className="w-3.5 h-3.5" />

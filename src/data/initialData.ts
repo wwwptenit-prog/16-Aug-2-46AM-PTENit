@@ -51,6 +51,10 @@ export const initialSiteSettings: SiteSettings = {
   freelancerTaxDeductionPercent: 5,
   taxRegistrationNumber: "BIN-1928374651029",
   invoiceTaxNote: "সকল মূল্যের সাথে সরকারি ভ্যাট ও ট্যাক্স প্রযোজ্য।",
+  defaultCommissionRate: 10,
+  defaultTrainerRevShare: 90,
+  defaultClientFee: 0,
+  defaultWithdrawalFee: 1.5,
   subAdminMembers: [
     {
       id: "sub-1",
