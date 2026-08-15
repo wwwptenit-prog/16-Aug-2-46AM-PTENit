@@ -145,7 +145,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
   } = useData();
 
   const [activeAdminTab, setActiveAdminTab] = useState<string>('dashboard');
-  const [activeMainModule, setActiveMainModule] = useState<'dashboard' | 'academy' | 'marketplace' | 'settings'>('dashboard');
+  const [activeMainModule, setActiveMainModule] = useState<'dashboard' | 'academy' | 'marketplace' | 'settings' | 'system'>('dashboard');
   const [methodSubTab, setMethodSubTab] = useState<'all' | 'pixel' | 'payment' | 'tax'>('all');
 
   // Admin Menubar Extensibility & Filter State
@@ -1358,13 +1358,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
                     {
                       id: 'settings',
                       label: '৪. সেটিংস',
-                      subText: 'সাইট কনফিগ, ফি & কমিশন',
+                      subText: 'সাইট কনফিগ, ফি & ট্যাক্স',
                       icon: Settings,
                       isActive: activeMainModule === 'settings',
                       onClick: () => {
                         setActiveMainModule('settings');
-                        if (!['settings', 'sub_admins', 'gallery', 'methods_setup', 'pixel_setup', 'payment_methods', 'written_content', 'responsive_setup', 'tax_vat', 'fee_commission'].includes(activeAdminTab) && !activeAdminTab.startsWith('custom_')) {
+                        if (!['settings', 'payment_methods', 'tax_vat', 'fee_commission'].includes(activeAdminTab) && !activeAdminTab.startsWith('custom_')) {
                           setActiveAdminTab('settings');
+                        }
+                      }
+                    },
+                    {
+                      id: 'system',
+                      label: '৫. সিস্টেম',
+                      subText: 'গ্যালারি, পিক্সেল, কনটেন & লেআউট',
+                      icon: Cpu,
+                      isActive: activeMainModule === 'system',
+                      onClick: () => {
+                        setActiveMainModule('system');
+                        if (!['gallery', 'pixel_setup', 'written_content', 'responsive_setup'].includes(activeAdminTab)) {
+                          setActiveAdminTab('gallery');
                         }
                       }
                     }
@@ -1892,7 +1905,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
         {/* SUB-TABS BAR (ট্যাববার - প্রতিটি মূল মডিউলের বিষয়ভিত্তিক বিস্তারিত সাব-ট্যাবস) */}
         {(() => {
           const currentModule = activeMainModule === 'dashboard'
-            ? (['courses', 'teachers', 'students', 'orders', 'billing_verify'].includes(activeAdminTab) ? 'academy' : ['services', 'marketplace', 'agency_clients', 'gigs_manage', 'office_projects', 'financials'].includes(activeAdminTab) ? 'marketplace' : ['settings', 'gallery', 'pixel_setup', 'payment_methods', 'written_content', 'responsive_setup', 'tax_vat', 'fee_commission'].includes(activeAdminTab) || activeAdminTab.startsWith('custom_') ? 'settings' : 'dashboard')
+            ? (['courses', 'teachers', 'students', 'orders', 'billing_verify'].includes(activeAdminTab)
+                ? 'academy'
+                : ['services', 'marketplace', 'agency_clients', 'gigs_manage', 'office_projects', 'financials'].includes(activeAdminTab)
+                ? 'marketplace'
+                : ['settings', 'payment_methods', 'tax_vat', 'fee_commission'].includes(activeAdminTab)
+                ? 'settings'
+                : ['gallery', 'pixel_setup', 'written_content', 'responsive_setup'].includes(activeAdminTab)
+                ? 'system'
+                : customAdminPages.some(cp => cp.id === activeAdminTab && cp.category === 'system')
+                ? 'system'
+                : activeAdminTab.startsWith('custom_')
+                ? 'settings'
+                : 'dashboard')
             : activeMainModule;
 
           if (currentModule === 'dashboard') {
@@ -1922,18 +1947,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ setActiveTab }) => {
               { id: 'financials', label: 'মার্কেটপ্লেস ফিনান্সিয়ালস', icon: DollarSign }
             ];
           } else if (currentModule === 'settings') {
-            categoryTitle = '⚙️ সাইট সেটিংস & কন্ফিগ:';
+            categoryTitle = '⚙️ সাইট সেটিংস & ফিনান্সিয়াল কনফিগ:';
             categoryColor = 'text-amber-400';
             subTabs = [
               { id: 'settings', label: '১. সাইট সেটিংস & সাব-এডমিন', icon: Settings },
-              { id: 'gallery', label: '২. গ্যালারি', icon: ImageIcon },
-              { id: 'pixel_setup', label: '৩. পিক্সেল সেটআপ', icon: Sparkles },
-              { id: 'payment_methods', label: '৪. পেমেন্ট মেথড', icon: CreditCard },
-              { id: 'written_content', label: '৫. সকল লিখিত কনটেন', icon: FileText },
-              { id: 'responsive_setup', label: '৬. রেসপন্সিভ (১০০% ফিট)', icon: Monitor },
-              { id: 'tax_vat', label: '৭. সকল ট্যাক্স & ভ্যাট', icon: ShieldCheck },
-              { id: 'fee_commission', label: '৮. প্ল্যাটফর্ম ফি & কমিশন কন্ট্রোলার', icon: Percent },
-              ...customAdminPages.map(cp => ({
+              { id: 'payment_methods', label: '২. পেমেন্ট মেথড', icon: CreditCard },
+              { id: 'tax_vat', label: '৩. সকল ট্যাক্স & ভ্যাট', icon: ShieldCheck },
+              { id: 'fee_commission', label: '৪. প্ল্যাটফর্ম ফি & কমিশন কন্ট্রোলার', icon: Percent },
+              ...customAdminPages.filter(cp => cp.category !== 'system').map(cp => ({
+                id: cp.id,
+                label: cp.label,
+                icon: FileText
+              }))
+            ];
+          } else if (currentModule === 'system') {
+            categoryTitle = '🖥️ সিস্টেম, কন্টেন্ট & লেআউট:';
+            categoryColor = 'text-sky-400';
+            subTabs = [
+              { id: 'gallery', label: '১. গ্যালারি', icon: ImageIcon },
+              { id: 'pixel_setup', label: '২. পিক্সেল সেটআপ', icon: Sparkles },
+              { id: 'written_content', label: '৩. সকল লিখিত কনটেন (রাইটিং)', icon: FileText },
+              { id: 'responsive_setup', label: '৪. রেসপন্সিভ ১০০% ফিট (লেআউট)', icon: Monitor },
+              ...customAdminPages.filter(cp => cp.category === 'system').map(cp => ({
                 id: cp.id,
                 label: cp.label,
                 icon: FileText
